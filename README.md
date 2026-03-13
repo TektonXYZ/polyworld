@@ -1,134 +1,168 @@
 # PolyWorld
 
-**A gamified real-yield virtual land platform on Solana**
+> A gamified real-yield virtual land platform on Solana
 
----
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Solana](https://img.shields.io/badge/Solana-Devnet-9945ff?logo=solana)](https://solana.com)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://reactjs.org)
+[![Anchor](https://img.shields.io/badge/Anchor-0.28-000000)](https://anchor-lang.com)
 
-## Core Concept
+## 🌍 Overview
 
-PolyWorld is a virtual land game where players buy digital parcels of real-world Earth, stake USDC into a treasury, and earn passive yield as "rent" from that treasury's earnings.
+PolyWorld is a virtual land game where players buy digital parcels of real-world Earth, stake USDC into a treasury, and earn passive yield as "rent" from that treasury's DeFi earnings.
 
-The goal: **make yielding fun and staking fun** by wrapping DeFi mechanics in a collectible map-based experience.
+**Key Innovation:** Every piece of land on Earth is tokenized as a buyable NFT. Remote locations (Antarctica, deserts, polar regions) are rarer and pay higher yields than cities.
 
----
+## ✨ Features
 
-## How It Works
+- 🗺️ **Real World Map** — Buy actual geographic locations
+- 🏗️ **Hexagon Grid** — Land divided into ~100km hex parcels
+- 💰 **Real Yield** — Treasury earns 4-5% APY from DeFi lending
+- 🎮 **Gamified** — Collect land, earn rent, build portfolio
+- 🔒 **Protocol-Only** — Guaranteed buyback, no speculation
+- ⚡ **Solana** — Fast, cheap transactions
 
-### 1. Land Ownership
-- Real world divided into small grid-based parcels
-- Each parcel is an NFT representing ownership of a geographic location
-- Not landmark-based — every square meter of Earth is potentially buyable
-- Enough land for everyone, no artificial scarcity FOMO
+## 🚀 Quick Start
 
-### 2. Buying Land
-- Players buy land **only from the protocol**
-- Price = treasury backing value (what the protocol staked on your behalf)
-- Example: Buy a parcel for $100 → $100 goes into treasury and gets staked
+### Prerequisites
 
-### 3. Treasury & Yield
-- Treasury holds USDC and stakes/lends it to earn yield (~4-5% annually)
-- Players earn "rent" as a portion of that yield
-- Different land rarities earn different percentages:
-  - Common land: ~2%
-  - Rare land: ~3%
-  - Epic land: ~4%
-- Protocol keeps the spread (1-2%) as profit + development funding
+- Node.js 18+
+- Solana CLI
+- Anchor Framework
+- PostgreSQL 14+
 
-### 4. Rarity System
-- **Based on real-world population density**
-  - Dense cities (high population) = Common (many parcels available)
-  - Remote/rural areas (low population) = Rare (few parcels available)
-- This flips traditional real estate: remote areas are the premium flex
+### Installation
 
-### 5. Rent Mechanic
-- Rent accrues daily while you hold land
-- You claim it manually when desired
-- Yield source: USDC lending/staking (Aave, Kamino, etc.)
-- Rent comes from the 5% treasury yield split between player + protocol
+```bash
+# Clone repository
+git clone https://github.com/TektonXYZ/polyworld.git
+cd polyworld
 
-### 6. Selling Land
-- **Protocol-only market** — no P2P trading
-- Sell back to protocol at any time for current backing value
-- Example: Bought for $100, held 1 year → Sell back for ~$102.50 (backing grew from protocol's accumulated 2.5%)
-- 5% fee taken on sell-back (revenue for platform)
-- Land returns to protocol inventory for resale to new buyers
+# Install frontend dependencies
+cd public && npm install
 
----
+# Install backend dependencies  
+cd ../backend && npm install
 
-## MVP Features
+# Set up database
+createdb polyworld
+psql -d polyworld -f database/schema.sql
 
-1. **World map with buyable land parcels**
-   - Grid-based real Earth coverage
-   - Visual indication of owned vs available land
+# Configure environment
+cp .env.example .env
+# Edit .env with your settings
+```
 
-2. **Wallet login**
-   - Solana wallet connection (Phantom, Solflare, etc.)
+### Running Locally
 
-3. **Buy land**
-   - Browse map, select parcel, purchase with USDC
-   - Immediate staking into treasury
+```bash
+# Terminal 1: Start backend
+cd backend
+npm run dev
 
-4. **Land rarity tiers**
-   - Common / Rare / Epic
-   - Determined by population density
-   - Different yield percentages per tier
+# Terminal 2: Serve frontend
+cd public
+npx serve .
 
-5. **Parcels generate daily rent**
-   - Accrues automatically
-   - Manual claim function
+# Open http://localhost:3000
+```
 
-6. **Dashboard showing earnings**
-   - Total rent earned
-   - Current land holdings
-   - Yield rate per parcel
+### Connect Wallet
 
-7. **Sell land back to protocol**
-   - Exit at current backing value
-   - 5% fee applied
-   - Land returns to protocol inventory
+1. Install [Phantom Wallet](https://phantom.app)
+2. Switch to Devnet
+3. Get devnet SOL from [faucet](https://faucet.solana.com)
+4. Connect wallet on PolyWorld
+5. Start buying land!
 
----
+## 🏗️ Architecture
 
-## Tokenomics Summary
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  Frontend   │────▶│   Backend   │────▶│  Database   │
+│  (React)    │     │  (Express)  │     │ (PostgreSQL)│
+└─────────────┘     └─────────────┘     └─────────────┘
+       │
+       ▼
+┌─────────────┐
+│   Solana    │
+│   Devnet    │
+│  (Anchor)   │
+└─────────────┘
+```
+
+### Smart Contracts
+
+| Program | Purpose | Status |
+|---------|---------|--------|
+| `land_nft` | Land parcel NFTs | ✅ Built |
+| `treasury` | USDC management | ✅ Built |
+
+### Tech Stack
+
+- **Frontend:** React 18, Leaflet Maps, Solana Web3.js
+- **Backend:** Node.js, Express, PostgreSQL
+- **Blockchain:** Solana, Anchor Framework, Rust
+- **Maps:** OpenStreetMap (CartoDB Dark)
+
+## 📊 Tokenomics
 
 | Component | Value |
 |-----------|-------|
-| Treasury yield target | ~5% annually |
-| Player rent (common) | ~2% |
-| Player rent (rare) | ~3% |
-| Player rent (epic) | ~4% |
-| Protocol profit | 1-2% spread |
-| Sell-back fee | 5% |
+| Treasury Yield | ~5% APY |
+| Player Rent (Common) | ~2% |
+| Player Rent (Rare) | ~3% |
+| Player Rent (Epic) | ~4% |
+| Protocol Fee | 5% on sells |
 
-**Revenue streams:**
-1. Yield spread (treasury earns 5%, pays 2-4% to players)
-2. 5% fee on land sell-backs
+## 🛣️ Roadmap
+
+### Phase 1: MVP ✅
+- [x] Smart contract architecture
+- [x] Frontend with map
+- [x] Backend API
+- [x] Wallet integration
+- [x] Land purchase/sell
+
+### Phase 2: Beta
+- [ ] Devnet deployment
+- [ ] USDC integration
+- [ ] Rent claiming
+- [ ] Mobile responsive
+- [ ] Analytics dashboard
+
+### Phase 3: Mainnet
+- [ ] Security audit
+- [ ] Mainnet deployment
+- [ ] Marketing campaign
+- [ ] Community building
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## 🔒 Security
+
+Please report security vulnerabilities to [security@polyworld.game](mailto:security@polyworld.game)
+
+See [SECURITY.md](SECURITY.md) for details.
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file
+
+## 🙏 Acknowledgments
+
+- Solana Foundation
+- Anchor Framework team
+- OpenStreetMap contributors
+
+## 📞 Contact
+
+- Twitter: [@PolyWorldGame](https://twitter.com/PolyWorldGame)
+- Discord: [Join our community](https://discord.gg/polyworld)
+- Email: hello@polyworld.game
 
 ---
 
-## Why This Works
-
-1. **Simple to understand** — Buy land, earn rent, sell back anytime
-2. **Guaranteed liquidity** — Protocol always buys back at fair value
-3. **No rug risk** — Treasury is fully backed, transparent
-4. **Gamified DeFi** — Collecting locations makes staking feel like a game
-5. **Sustainable** — Revenue comes from real yield, not ponzi mechanics
-6. **Accessible** — No trading skills needed, just collect and earn
-
----
-
-## Chain
-
-**Solana** — Cheap transactions, fast finality, good for frequent rent claims
-
----
-
-## Status
-
-**Active Development** — Daily commits, building in public
-
-**Built by:** Ali + Kelvin (AI assistant)
-
----
-
-*Note: This is a concept document in active development. Subject to change.*
+**Built with 💜 on Solana**
