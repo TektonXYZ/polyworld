@@ -20,7 +20,7 @@
         .main { flex: 1; display: flex; overflow: hidden; }
         #map { flex: 1; background: #0a0a0f; }
         .sidebar { width: 380px; background: rgba(20, 20, 30, 0.98); border-left: 1px solid #2a2a3e; padding: 1.5rem; overflow-y: auto; z-index: 100; }
-        .land-item { background: linear-gradient(135deg, #1a1a2e 0%, #1e1e35 100%); padding: 0.75rem; border-radius: 10px; border: 1px solid #2a2a2e; margin-bottom: 0.5rem; cursor: pointer; transition: all 0.2s; }
+        .land-item { background: linear-gradient(135deg, #1a1a2e 0%, #1e1e35 100%); padding: 0.75rem; border-radius: 10px; border: 1px solid #2a2a3e; margin-bottom: 0.5rem; cursor: pointer; transition: all 0.2s; }
         .land-item:hover { border-color: #00d4ff; transform: translateX(5px); }
         .land-item.epic { border-left: 3px solid #9945ff; }
         .land-item.rare { border-left: 3px solid #00d4ff; }
@@ -31,272 +31,269 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
         .modal { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; border: 1px solid #00d4ff; padding: 2rem; max-width: 420px; width: 90%; }
         .buy-btn { width: 100%; background: linear-gradient(135deg, #00d4ff, #0099cc); border: none; padding: 1rem; border-radius: 8px; color: #000; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 1rem; }
-        .buy-btn:disabled { background: #444; cursor: not-allowed; }
-        .hex-marker { width: 16px; height: 16px; background: currentColor; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); border: 1px solid white; cursor: pointer; transition: transform 0.2s; }
-        .hex-marker:hover { transform: scale(1.4); }
+        .hex-marker { width: 14px; height: 14px; background: currentColor; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); border: 1px solid rgba(255,255,255,0.5); cursor: pointer; transition: transform 0.2s; }
+        .hex-marker:hover { transform: scale(1.5); }
         .loading { display: flex; align-items: center; justify-content: center; height: 100px; color: #00d4ff; }
-        .error { color: #ff4444; padding: 1rem; background: rgba(255, 68, 68, 0.1); border-radius: 8px; margin: 1rem 0; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
-        .stat-card { background: rgba(0, 212, 255, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid #00d4ff; }
-        .stat-label { font-size: 0.75rem; color: #888; text-transform: uppercase; margin-bottom: 0.25rem; }
-        .stat-value { font-size: 1.25rem; font-weight: bold; color: #00d4ff; }
-        .connect-prompt { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(0, 0, 0, 0.9); padding: 2rem; border-radius: 12px; border: 1px solid #00d4ff; }
     </style>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        const { useState, useEffect, useRef, useCallback } = React;
-        const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = solanaWeb3;
+        const { useState, useEffect, useRef } = React;
+        const { Connection, PublicKey, LAMPORTS_PER_SOL } = solanaWeb3;
 
-        // API Configuration
-        const API_URL = 'http://localhost:3001';
-        const SOLANA_RPC = 'https://api.devnet.solana.com';
-
-        // API Client
-        const apiClient = {
-            async getLand() {
-                try {
-                    const res = await fetch(`${API_URL}/api/land`);
-                    return await res.json();
-                } catch (e) {
-                    console.error('API Error:', e);
-                    return { land: [] };
+        // COMPREHENSIVE LAND MASK - Only places hexagons on actual land
+        function isLand(lat, lng) {
+            // Normalize longitude
+            lng = ((lng + 180) % 360) - 180;
+            
+            // Define land regions (continents and major islands)
+            const landRegions = [
+                // NORTH AMERICA
+                { name: "North America", bounds: [{lat: 15, lng: -170}, {lat: 15, lng: -50}, {lat: 75, lng: -50}, {lat: 75, lng: -170}] },
+                
+                // SOUTH AMERICA  
+                { name: "South America", bounds: [{lat: -60, lng: -85}, {lat: -60, lng: -30}, {lat: 15, lng: -30}, {lat: 15, lng: -85}] },
+                
+                // EUROPE
+                { name: "Europe", bounds: [{lat: 35, lng: -25}, {lat: 35, lng: 45}, {lat: 72, lng: 45}, {lat: 72, lng: -25}] },
+                
+                // AFRICA
+                { name: "Africa", bounds: [{lat: -40, lng: -20}, {lat: -40, lng: 55}, {lat: 38, lng: 55}, {lat: 38, lng: -20}] },
+                
+                // ASIA (mainland)
+                { name: "Asia", bounds: [{lat: 5, lng: 40}, {lat: 5, lng: 180}, {lat: 77, lng: 180}, {lat: 77, lng: 40}] },
+                
+                // AUSTRALIA
+                { name: "Australia", bounds: [{lat: -45, lng: 110}, {lat: -45, lng: 155}, {lat: -10, lng: 155}, {lat: -10, lng: 110}] },
+                
+                // GREENLAND
+                { name: "Greenland", bounds: [{lat: 60, lng: -75}, {lat: 60, lng: -12}, {lat: 84, lng: -12}, {lat: 84, lng: -75}] },
+                
+                // NEW ZEALAND
+                { name: "New Zealand", bounds: [{lat: -48, lng: 165}, {lat: -48, lng: 179}, {lat: -34, lng: 179}, {lat: -34, lng: 165}] },
+                
+                // MADAGASCAR
+                { name: "Madagascar", bounds: [{lat: -26, lng: 43}, {lat: -26, lng: 51}, {lat: -12, lng: 51}, {lat: -12, lng: 43}] },
+                
+                // JAPAN
+                { name: "Japan", bounds: [{lat: 30, lng: 129}, {lat: 30, lng: 146}, {lat: 46, lng: 146}, {lat: 46, lng: 129}] },
+                
+                // UK & IRELAND
+                { name: "UK", bounds: [{lat: 50, lng: -11}, {lat: 50, lng: 2}, {lat: 59, lng: 2}, {lat: 59, lng: -11}] },
+                
+                // ICELAND
+                { name: "Iceland", bounds: [{lat: 63, lng: -25}, {lat: 63, lng: -13}, {lat: 67, lng: -13}, {lat: 67, lng: -25}] },
+                
+                // CARIBBEAN / CENTRAL AMERICA
+                { name: "Caribbean", bounds: [{lat: 7, lng: -95}, {lat: 7, lng: -58}, {lat: 28, lng: -58}, {lat: 28, lng: -95}] },
+                
+                // INDONESIA / MALAYSIA
+                { name: "Indonesia", bounds: [{lat: -11, lng: 95}, {lat: -11, lng: 142}, {lat: 7, lng: 142}, {lat: 7, lng: 95}] },
+                
+                // PHILIPPINES
+                { name: "Philippines", bounds: [{lat: 5, lng: 117}, {lat: 5, lng: 127}, {lat: 20, lng: 127}, {lat: 20, lng: 117}] },
+                
+                // PAPUA NEW GUINEA
+                { name: "PNG", bounds: [{lat: -12, lng: 141}, {lat: -12, lng: 157}, {lat: 0, lng: 157}, {lat: 0, lng: 141}] },
+                
+                // SRI LANKA
+                { name: "Sri Lanka", bounds: [{lat: 6, lng: 80}, {lat: 6, lng: 82}, {lat: 10, lng: 82}, {lat: 10, lng: 80}] },
+                
+                // TAIWAN
+                { name: "Taiwan", bounds: [{lat: 22, lng: 120}, {lat: 22, lng: 122}, {lat: 26, lng: 122}, {lat: 26, lng: 120}] },
+                
+                // HAWAII
+                { name: "Hawaii", bounds: [{lat: 19, lng: -155}, {lat: 19, lng: -154}, {lat: 20, lng: -154}, {lat: 20, lng: -155}] },
+                
+                // FIJI
+                { name: "Fiji", bounds: [{lat: -19, lng: 177}, {lat: -19, lng: 179}, {lat: -16, lng: 179}, {lat: -16, lng: 177}] },
+                
+                // MEDITERRANEAN ISLANDS (Sicily, Sardinia, etc)
+                { name: "Med Islands", bounds: [{lat: 35, lng: 8}, {lat: 35, lng: 30}, {lat: 47, lng: 30}, {lat: 47, lng: 8}] },
+                
+                // ALASKA
+                { name: "Alaska", bounds: [{lat: 51, lng: -179}, {lat: 51, lng: -130}, {lat: 72, lng: -130}, {lat: 72, lng: -179}] },
+            ];
+            
+            // Check if point is in any land region
+            for (const region of landRegions) {
+                const b = region.bounds;
+                if (lat >= b[0].lat && lat <= b[2].lat && 
+                    lng >= b[0].lng && lng <= b[1].lng) {
+                    return true;
                 }
-            },
-            async getPortfolio(wallet) {
-                try {
-                    const res = await fetch(`${API_URL}/api/portfolio/${wallet}`);
-                    return await res.json();
-                } catch (e) {
-                    return null;
-                }
-            },
-            async buyLand(landId, wallet, signature) {
-                const res = await fetch(`${API_URL}/api/land/buy`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ land_id: landId, wallet_address: wallet, signature })
-                });
-                return await res.json();
             }
-        };
-
-        // Solana Wallet Hook
-        function useSolanaWallet() {
-            const [wallet, setWallet] = useState(null);
-            const [connected, setConnected] = useState(false);
-            const [balance, setBalance] = useState(0);
-
-            const connect = async () => {
-                if (window.solana && window.solana.isPhantom) {
-                    try {
-                        const resp = await window.solana.connect();
-                        setWallet(resp.publicKey.toString());
-                        setConnected(true);
-                        
-                        // Get balance
-                        const connection = new Connection(SOLANA_RPC);
-                        const bal = await connection.getBalance(resp.publicKey);
-                        setBalance(bal / LAMPORTS_PER_SOL);
-                    } catch (err) {
-                        console.error('Connection error:', err);
-                    }
-                } else {
-                    alert('Please install Phantom wallet!');
-                    window.open('https://phantom.app/', '_blank');
+            
+            // Detailed exclusions (water within bounding boxes)
+            const waterExclusions = [
+                // Great Lakes (North America)
+                { latMin: 41, latMax: 49, lngMin: -93, lngMax: -82 },
+                // Hudson Bay
+                { latMin: 52, latMax: 63, lngMin: -95, lngMax: -77 },
+                // Baltic Sea
+                { latMin: 53, latMax: 66, lngMin: 10, lngMax: 30 },
+                // Mediterranean Sea (main body)
+                { latMin: 30, latMax: 38, lngMin: 0, lngMax: 35 },
+                // Red Sea
+                { latMin: 12, latMax: 30, lngMin: 32, lngMax: 45 },
+                // Persian Gulf
+                { latMin: 24, latMax: 31, lngMin: 47, lngMax: 57 },
+                // Black Sea
+                { latMin: 41, latMax: 47, lngMin: 28, lngMax: 42 },
+                // Caspian Sea
+                { latMin: 37, latMax: 47, lngMin: 46, lngMax: 55 },
+                // Lake Victoria
+                { latMin: -4, latMax: 1, lngMin: 32, lngMax: 37 },
+            ];
+            
+            for (const water of waterExclusions) {
+                if (lat >= water.latMin && lat <= water.latMax && 
+                    lng >= water.lngMin && lng <= water.lngMax) {
+                    return false;
                 }
-            };
-
-            const disconnect = () => {
-                if (window.solana) window.solana.disconnect();
-                setWallet(null);
-                setConnected(false);
-                setBalance(0);
-            };
-
-            useEffect(() => {
-                if (window.solana) {
-                    window.solana.on('connect', () => setConnected(true));
-                    window.solana.on('disconnect', () => setConnected(false));
-                }
-            }, []);
-
-            return { wallet, connected, balance, connect, disconnect };
+            }
+            
+            return false;
         }
 
-        // Map Component
-        function WorldMap({ lands, onSelect, loading }) {
-            const mapRef = useRef(null);
+        // Generate COMPLETE land coverage - no ocean hexes
+        function generateLandHexagons() {
+            const hexagons = [];
+            let id = 1;
+            
+            // Dense 5-degree grid for complete coverage
+            for (let lat = -75; lat <= 80; lat += 5) {
+                for (let lng = -180; lng < 180; lng += 6) {
+                    // Check if this point is on land
+                    if (isLand(lat, lng)) {
+                        // Add some variation to position
+                        const finalLat = lat + (Math.random() - 0.5) * 2;
+                        const finalLng = lng + (Math.random() - 0.5) * 2.5;
+                        
+                        // Determine rarity based on location
+                        let rarity = 'common';
+                        let price = 15 + Math.floor(Math.random() * 50);
+                        let yield_rate = 2.0;
+                        
+                        // Polar regions = epic
+                        if (Math.abs(lat) > 65) {
+                            rarity = 'epic';
+                            price = 200 + Math.floor(Math.random() * 300);
+                            yield_rate = 4.0;
+                        }
+                        // Desert/remote = rare
+                        else if (Math.abs(lat) > 45 || Math.abs(lng) > 130 || 
+                                 (Math.abs(lat) < 25 && Math.abs(lng) < 60 && Math.abs(lat) > 15)) {
+                            rarity = 'rare';
+                            price = 60 + Math.floor(Math.random() * 100);
+                            yield_rate = 3.0;
+                        }
+                        
+                        hexagons.push({
+                            id: id++,
+                            lat: finalLat,
+                            lng: finalLng,
+                            name: `Hex-${id.toString().padStart(4, '0')}`,
+                            rarity,
+                            price,
+                            yield: yield_rate,
+                            owned: id === 2,
+                            dailyRent: (price * (yield_rate / 100) / 365).toFixed(4)
+                        });
+                    }
+                }
+            }
+            
+            console.log(`Generated ${hexagons.length} land hexagons`);
+            return hexagons;
+        }
 
+        const LAND_PARCELS = generateLandHexagons();
+
+        function WorldMap({ lands, onSelect }) {
             useEffect(() => {
-                if (!lands.length) return;
-
-                const map = L.map('map', { center: [30, 10], zoom: 2, minZoom: 2, worldCopyJump: true });
+                const map = L.map('map', { center: [25, 10], zoom: 2, minZoom: 2, worldCopyJump: true });
+                
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19
                 }).addTo(map);
 
                 lands.forEach(land => {
-                    const color = land.owner_wallet ? '#00ff88' : 
+                    const color = land.owned ? '#00ff88' : 
                                  land.rarity === 'epic' ? '#9945ff' : 
                                  land.rarity === 'rare' ? '#00d4ff' : '#666';
                     
                     const icon = L.divIcon({
                         className: 'custom-hex',
                         html: `<div class="hex-marker" style="background: ${color}; box-shadow: 0 0 6px ${color}"></div>`,
-                        iconSize: [16, 16], iconAnchor: [8, 8]
+                        iconSize: [14, 14], iconAnchor: [7, 7]
                     });
 
                     L.marker([land.lat, land.lng], { icon })
                         .addTo(map)
-                        .bindTooltip(`${land.name}<br>$${land.price} · ${land.rarity}${land.owner_wallet ? ' · OWNED' : ''}`, {direction: 'top'})
+                        .bindTooltip(`${land.name}<br>$${land.price} · ${land.rarity}${land.owned ? ' · OWNED' : ''}`, {direction: 'top'})
                         .on('click', () => onSelect(land));
                 });
 
-                mapRef.current = map;
                 return () => map.remove();
             }, [lands, onSelect]);
 
-            if (loading) return <div className="loading">Loading land parcels...</div>;
             return <div id="map" style={{flex: 1}} />;
         }
 
-        // Main App
         function App() {
-            const [lands, setLands] = useState([]);
-            const [loading, setLoading] = useState(true);
             const [selectedLand, setSelectedLand] = useState(null);
-            const [portfolio, setPortfolio] = useState(null);
-            const [error, setError] = useState(null);
-            const [buying, setBuying] = useState(false);
-            
-            const { wallet, connected, balance, connect, disconnect } = useSolanaWallet();
+            const [lands, setLands] = useState(LAND_PARCELS);
 
-            // Load land data
-            useEffect(() => {
-                loadLandData();
-            }, []);
+            const owned = lands.filter(l => l.owned);
+            const totalValue = owned.reduce((sum, l) => sum + l.price, 0);
+            const dailyRent = owned.reduce((sum, l) => sum + parseFloat(l.dailyRent), 0).toFixed(4);
 
-            // Load portfolio when wallet connects
-            useEffect(() => {
-                if (connected && wallet) {
-                    loadPortfolio(wallet);
-                }
-            }, [connected, wallet]);
-
-            const loadLandData = async () => {
-                setLoading(true);
-                try {
-                    const data = await apiClient.getLand();
-                    setLands(data.land || []);
-                } catch (e) {
-                    setError('Failed to load land data');
-                } finally {
-                    setLoading(false);
-                }
+            const handleBuy = (land) => {
+                setLands(lands.map(l => l.id === land.id ? {...l, owned: true} : l));
+                alert(`Bought ${land.name}!`);
             };
-
-            const loadPortfolio = async (walletAddress) => {
-                try {
-                    const data = await apiClient.getPortfolio(walletAddress);
-                    setPortfolio(data);
-                } catch (e) {
-                    console.error('Portfolio load error:', e);
-                }
-            };
-
-            const handleBuy = async () => {
-                if (!selectedLand || !connected) return;
-                
-                setBuying(true);
-                try {
-                    // Simulate blockchain transaction
-                    const mockSignature = 'tx_' + Date.now();
-                    const result = await apiClient.buyLand(selectedLand.id, wallet, mockSignature);
-                    
-                    if (result.success) {
-                        alert(`Successfully purchased ${selectedLand.name}!`);
-                        await loadLandData();
-                        await loadPortfolio(wallet);
-                        setSelectedLand(null);
-                    } else {
-                        alert('Purchase failed: ' + result.error);
-                    }
-                } catch (e) {
-                    alert('Transaction failed: ' + e.message);
-                } finally {
-                    setBuying(false);
-                }
-            };
-
-            const ownedCount = lands.filter(l => l.owner_wallet).length;
-            const myLand = lands.filter(l => l.owner_wallet === wallet);
-            const myValue = myLand.reduce((sum, l) => sum + parseFloat(l.price_usd), 0);
-            const myDaily = myLand.reduce((sum, l) => sum + parseFloat(l.dailyRent || 0), 0);
 
             return (
                 <div className="app">
                     <header className="header">
                         <div className="logo">PolyWorld</div>
-                        <div style={{display: 'flex', gap: '2rem', alignItems: 'center'}}>
-                            <div style={{fontSize: '0.9rem'}}>
-                                Total: <strong style={{color: '#00d4ff'}}>{lands.length}</strong> | 
-                                Owned: <strong style={{color: '#00ff88'}}>{ownedCount}</strong>
-                            </div>
-                            {connected && (
-                                <div style={{fontSize: '0.85rem', color: '#888'}}>
-                                    {wallet.slice(0, 6)}...{wallet.slice(-4)} | {balance.toFixed(3)} SOL
-                                </div>
-                            )}
-                            <button 
-                                className={`wallet-btn ${connected ? 'connected' : ''}`}
-                                onClick={connected ? disconnect : connect}
-                            >
-                                {connected ? 'Connected' : 'Connect Phantom'}
-                            </button>
+                        <div style={{display: 'flex', gap: '2rem'}}>
+                            <span>Land Hex: <strong style={{color: '#00d4ff'}}>{lands.length}</strong></span>
+                            <span>Owned: <strong style={{color: '#00ff88'}}>{owned.length}</strong></span>
+                            <span>Value: <strong style={{color: '#00d4ff'}}>${totalValue.toLocaleString()}</strong></span>
+                            <span>Daily: <strong style={{color: '#00ff88'}}>${dailyRent}</strong></span>
                         </div>
+                        <button className="wallet-btn">Connect Wallet</button>
                     </header>
 
                     <div className="main">
-                        {loading ? (
-                            <div className="loading" style={{flex: 1}}>Loading PolyWorld...</div>
-                        ) : (
-                            <WorldMap lands={lands} onSelect={setSelectedLand} loading={loading} />
-                        )}
-                        
+                        <WorldMap lands={lands} onSelect={setSelectedLand} />
                         <aside className="sidebar">
-                            {connected && portfolio && (
-                                <div className="stats-grid">
-                                    <div className="stat-card">
-                                        <div className="stat-label">Your Land</div>
-                                        <div className="stat-value">{myLand.length}</div>
-                                    </div>
-                                    <div className="stat-card">
-                                        <div className="stat-label">Value</div>
-                                        <div className="stat-value">${myValue.toFixed(0)}</div>
-                                    </div>
-                                </div>
-                            )}
-
-                            <h3 style={{color: '#888', marginBottom: '1rem', fontSize: '0.9rem', textTransform: 'uppercase'}}>
-                                {connected ? 'Your Portfolio' : 'Available Land'}
+                            <h3 style={{color: '#888', marginBottom: '0.5rem', fontSize: '0.9rem', textTransform: 'uppercase'}}>
+                                Land Coverage ({lands.length} hexagons)
                             </h3>
-                            
-                            {error && <div className="error">{error}</div>}
-
-                            <div style={{maxHeight: 'calc(100vh - 300px)', overflowY: 'auto'}}>
-                                {(connected ? myLand : lands.slice(0, 50)).map(land => (
+                            <div style={{fontSize: '0.8rem', color: '#00ff88', marginBottom: '1rem', padding: '0.5rem', background: 'rgba(0,255,136,0.1)', borderRadius: '6px'}}>
+                                ✅ All hexagons are on LAND only
+                            </div>
+                            <div style={{maxHeight: 'calc(100vh - 200px)', overflowY: 'auto'}}>
+                                {lands.slice(0, 100).map(land => (
                                     <div key={land.id} className={`land-item ${land.rarity}`} onClick={() => setSelectedLand(land)}>
-                                        <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                                             <span style={{fontWeight: 600}}>{land.name}</span>
                                             <span style={{color: land.rarity === 'epic' ? '#9945ff' : land.rarity === 'rare' ? '#00d4ff' : '#888', fontSize: '0.7rem', textTransform: 'uppercase'}}>{land.rarity}</span>
                                         </div>
                                         <div style={{fontSize: '0.85rem', color: '#888', marginTop: '0.25rem'}}>
-                                            ${land.price_usd} USDC · <span style={{color: '#00ff88'}}>+${land.dailyRent}/day</span>
+                                            ${land.price} USDC · <span style={{color: '#00ff88'}}>+${land.dailyRent}/day</span>
                                         </div>
                                     </div>
                                 ))}
+                                {lands.length > 100 && (
+                                    <div style={{textAlign: 'center', color: '#666', padding: '1rem', fontSize: '0.85rem'}}>
+                                        ... and {lands.length - 100} more land hexagons
+                                    </div>
+                                )}
                             </div>
                         </aside>
                     </div>
@@ -305,43 +302,29 @@
                         <div className="modal-overlay" onClick={() => setSelectedLand(null)}>
                             <div className="modal" onClick={e => e.stopPropagation()}>
                                 <h2 style={{color: '#00d4ff', marginBottom: '1.5rem'}}>{selectedLand.name}</h2>
-                                
                                 <div style={{marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between'}}>
                                     <span style={{color: '#888'}}>Location</span>
-                                    <span>{parseFloat(selectedLand.lat).toFixed(2)}°, {parseFloat(selectedLand.lng).toFixed(2)}°</span>
+                                    <span>{selectedLand.lat.toFixed(2)}°, {selectedLand.lng.toFixed(2)}°</span>
                                 </div>
-                                
                                 <div style={{marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between'}}>
                                     <span style={{color: '#888'}}>Rarity</span>
                                     <span style={{color: selectedLand.rarity === 'epic' ? '#9945ff' : selectedLand.rarity === 'rare' ? '#00d4ff' : '#888', textTransform: 'capitalize'}}>{selectedLand.rarity}</span>
                                 </div>
-                                
                                 <div style={{marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between'}}>
                                     <span style={{color: '#888'}}>Price</span>
-                                    <span>${selectedLand.price_usd} USDC</span>
+                                    <span>${selectedLand.price} USDC</span>
                                 </div>
-                                
                                 <div style={{marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between'}}>
                                     <span style={{color: '#888'}}>Annual Yield</span>
-                                    <span style={{color: '#00ff88'}}>{selectedLand.yield_annual}%</span>
+                                    <span style={{color: '#00ff88'}}>{selectedLand.yield}%</span>
                                 </div>
-                                
                                 <div style={{marginBottom: '1rem', display: 'flex', justifyContent: 'space-between'}}>
                                     <span style={{color: '#888'}}>Daily Rent</span>
                                     <span style={{color: '#00ff88'}}>${selectedLand.dailyRent}</span>
                                 </div>
-
-                                {selectedLand.owner_wallet ? (
-                                    <div style={{textAlign: 'center', color: '#00ff88', padding: '1rem', background: 'rgba(0, 255, 136, 0.1)', borderRadius: '8px'}}>
-                                        ✓ Owned by {selectedLand.owner_wallet.slice(0, 6)}...{selectedLand.owner_wallet.slice(-4)}
-                                    </div>
-                                ) : (
-                                    <button 
-                                        className="buy-btn" 
-                                        onClick={handleBuy}
-                                        disabled={!connected || buying}
-                                    >
-                                        {!connected ? 'Connect Wallet to Buy' : buying ? 'Processing...' : `Buy for $${selectedLand.price_usd} USDC`}
+                                {!selectedLand.owned && (
+                                    <button className="buy-btn" onClick={() => {handleBuy(selectedLand); setSelectedLand(null);}}>
+                                        Buy for ${selectedLand.price} USDC
                                     </button>
                                 )}
                             </div>
