@@ -7,8 +7,6 @@
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
     <style>
         * {
             margin: 0;
@@ -34,7 +32,6 @@
             height: 100vh;
         }
 
-        /* Header */
         .header {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             padding: 1rem 2rem;
@@ -53,27 +50,6 @@
             -webkit-text-fill-color: transparent;
         }
 
-        .nav {
-            display: flex;
-            gap: 2rem;
-        }
-
-        .nav-item {
-            cursor: pointer;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            transition: all 0.3s;
-        }
-
-        .nav-item:hover {
-            background: rgba(0, 212, 255, 0.1);
-        }
-
-        .nav-item.active {
-            background: rgba(0, 212, 255, 0.2);
-            color: #00d4ff;
-        }
-
         .wallet-btn {
             background: linear-gradient(135deg, #00d4ff, #0099cc);
             border: none;
@@ -82,34 +58,20 @@
             color: #000;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s;
         }
 
-        .wallet-btn:hover {
-            box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
-            transform: translateY(-2px);
-        }
-
-        /* Main Content */
         .main {
             flex: 1;
             display: flex;
             overflow: hidden;
         }
 
-        /* Sidebar */
         .sidebar {
             width: 350px;
             background: #14141e;
             border-right: 1px solid #2a2a3e;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-        }
-
-        .sidebar-section {
             padding: 1.5rem;
-            border-bottom: 1px solid #2a2a3e;
+            overflow-y: auto;
         }
 
         .sidebar-title {
@@ -120,11 +82,11 @@
             margin-bottom: 1rem;
         }
 
-        /* Stats */
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1rem;
+            margin-bottom: 2rem;
         }
 
         .stat-card {
@@ -147,8 +109,7 @@
             color: #00d4ff;
         }
 
-        /* Land List */
-        .land-grid {
+        .land-list {
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
@@ -165,65 +126,77 @@
 
         .land-item:hover {
             border-color: #00d4ff;
-            background: #1e1e35;
-        }
-
-        .land-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
         }
 
         .land-name {
             font-weight: 600;
+            margin-bottom: 0.25rem;
         }
 
-        .land-rarity {
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-        }
-
-        .land-rarity.common {
-            background: #3a3a4e;
+        .land-location {
+            font-size: 0.8rem;
             color: #888;
         }
 
-        .land-rarity.rare {
-            background: #1a4a6e;
-            color: #00d4ff;
-        }
-
-        .land-rarity.epic {
-            background: #4a1a6e;
-            color: #9945ff;
-        }
-
-        .land-details {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.85rem;
-            color: #888;
-        }
-
-        .land-yield {
-            color: #00ff88;
-        }
-
-        /* Map Container */
-        .map-container {
+        .map-placeholder {
             flex: 1;
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
             position: relative;
         }
 
-        #map {
-            width: 100%;
-            height: 100%;
+        .globe-visual {
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #2a3a5e, #0a0a1f);
+            box-shadow: 
+                0 0 60px rgba(0, 212, 255, 0.3),
+                inset -20px -20px 60px rgba(0, 0, 0, 0.5);
+            position: relative;
         }
 
-        /* Buy Modal */
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            border-radius: 50%;
+        }
+
+        .land-dot {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .land-dot:hover {
+            transform: scale(1.5);
+            box-shadow: 0 0 20px currentColor;
+        }
+
+        .land-dot.common { background: #888; }
+        .land-dot.rare { background: #00d4ff; }
+        .land-dot.epic { background: #9945ff; }
+        .land-dot.owned { background: #00ff88; }
+
+        .placeholder-text {
+            margin-top: 2rem;
+            color: #888;
+            font-size: 1.2rem;
+        }
+
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -244,7 +217,6 @@
             padding: 2rem;
             max-width: 400px;
             width: 90%;
-            box-shadow: 0 0 40px rgba(0, 212, 255, 0.3);
         }
 
         .modal-title {
@@ -266,10 +238,6 @@
             color: #888;
         }
 
-        .modal-value {
-            font-weight: 600;
-        }
-
         .buy-btn {
             width: 100%;
             background: linear-gradient(135deg, #00d4ff, #0099cc);
@@ -281,11 +249,6 @@
             font-size: 1.1rem;
             cursor: pointer;
             margin-top: 1.5rem;
-            transition: all 0.3s;
-        }
-
-        .buy-btn:hover {
-            box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
         }
 
         .close-btn {
@@ -298,36 +261,25 @@
             font-size: 1.5rem;
             cursor: pointer;
         }
-
-        /* Loading */
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            font-size: 1.5rem;
-            color: #00d4ff;
-        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React;
 
-        // Mock data for demonstration
         const MOCK_LAND = [
-            { id: 1, name: "NYC Block 8472", lat: 40.7128, lng: -74.0060, rarity: "common", price: 100, yield: 2.0, owned: true, dailyRent: 0.0055 },
-            { id: 2, name: "Antarctica Sector 12", lat: -82.8628, lng: -135.0000, rarity: "epic", price: 500, yield: 4.0, owned: true, dailyRent: 0.055 },
-            { id: 3, name: "Tokyo District 5", lat: 35.6762, lng: 139.6503, rarity: "common", price: 120, yield: 2.0, owned: false, dailyRent: 0.0066 },
-            { id: 4, name: "Sahara Zone 44", lat: 23.4162, lng: 25.6628, rarity: "rare", price: 250, yield: 3.0, owned: false, dailyRent: 0.0205 },
+            { id: 1, name: "NYC Block 8472", lat: 40.7, lng: -74.0, rarity: "common", price: 100, yield: 2.0, owned: true, dailyRent: 0.0055 },
+            { id: 2, name: "Antarctica Sector 12", lat: -82.8, lng: -135.0, rarity: "epic", price: 500, yield: 4.0, owned: false, dailyRent: 0.055 },
+            { id: 3, name: "Tokyo District 5", lat: 35.6, lng: 139.6, rarity: "common", price: 120, yield: 2.0, owned: false, dailyRent: 0.0066 },
+            { id: 4, name: "Sahara Zone 44", lat: 23.4, lng: 25.6, rarity: "rare", price: 250, yield: 3.0, owned: false, dailyRent: 0.0205 },
+            { id: 5, name: "Amazon Plot 7", lat: -3.4, lng: -62.2, rarity: "rare", price: 180, yield: 3.0, owned: false, dailyRent: 0.0148 },
         ];
 
-        // Stats Component
         function Stats({ totalLand, totalValue, dailyRent }) {
             return (
-                <div className="sidebar-section">
+                <div>
                     <div className="sidebar-title">Your Portfolio</div>
                     <div className="stats-grid">
                         <div className="stat-card">
@@ -351,29 +303,21 @@
             );
         }
 
-        // Land List Component
         function LandList({ lands, onSelect }) {
-            const ownedLand = lands.filter(l => l.owned);
-            
+            const owned = lands.filter(l => l.owned);
             return (
-                <div className="sidebar-section">
+                <div>
                     <div className="sidebar-title">Your Land</div>
-                    <div className="land-grid">
-                        {ownedLand.map(land => (
+                    <div className="land-list">
+                        {owned.map(land => (
                             <div key={land.id} className="land-item" onClick={() => onSelect(land)}>
-                                <div className="land-header">
-                                    <span className="land-name">{land.name}</span>
-                                    <span className={`land-rarity ${land.rarity}`}>{land.rarity}</span>
-                                </div>
-                                <div className="land-details">
-                                    <span>${land.price}</span>
-                                    <span className="land-yield">+${land.dailyRent}/day</span>
-                                </div>
+                                <div className="land-name">{land.name}</div>
+                                <div className="land-location">${land.price} · {land.rarity} · +${land.dailyRent}/day</div>
                             </div>
                         ))}
-                        {ownedLand.length === 0 && (
+                        {owned.length === 0 && (
                             <div style={{color: '#888', textAlign: 'center', padding: '2rem'}}>
-                                No land yet. Click on the map to buy!
+                                Click land on globe to buy!
                             </div>
                         )}
                     </div>
@@ -381,129 +325,86 @@
             );
         }
 
-        // Buy Modal Component
+        function Globe({ lands, onSelect }) {
+            return (
+                <div className="map-placeholder">
+                    <div className="globe-visual">
+                        <div className="grid-overlay"></div>
+                        {lands.map((land, i) => {
+                            const x = 50 + (land.lng / 360) * 80;
+                            const y = 50 - (land.lat / 180) * 80;
+                            const className = `land-dot ${land.owned ? 'owned' : land.rarity}`;
+                            return (
+                                <div
+                                    key={land.id}
+                                    className={className}
+                                    style={{left: x + '%', top: y + '%'}}
+                                    onClick={() => onSelect(land)}
+                                    title={land.name}
+                                />
+                            );
+                        })}
+                    </div>
+                    <div className="placeholder-text">PolyWorld Globe Visualization</div>
+                    <div style={{color: '#666', marginTop: '0.5rem'}}>Click dots to buy land</div>
+                </div>
+            );
+        }
+
         function BuyModal({ land, onClose, onBuy }) {
             if (!land) return null;
-
             return (
                 <div className="modal-overlay" onClick={onClose}>
                     <div className="modal" onClick={e => e.stopPropagation()}>
-                        <button className="close-btn" onClick={onClose}>×</button>
-                        <h2 className="modal-title">Buy Land</h2>
-                        
+                        <h2 className="modal-title">{land.owned ? 'Your Land' : 'Buy Land'}</h2>
                         <div className="modal-row">
                             <span className="modal-label">Location</span>
-                            <span className="modal-value">{land.name}</span>
+                            <span>{land.name}</span>
                         </div>
-                        
                         <div className="modal-row">
                             <span className="modal-label">Rarity</span>
-                            <span className="modal-value" style={{textTransform: 'capitalize'}}>{land.rarity}</span>
+                            <span style={{textTransform: 'capitalize'}}>{land.rarity}</span>
                         </div>
-                        
                         <div className="modal-row">
                             <span className="modal-label">Price</span>
-                            <span className="modal-value">${land.price} USDC</span>
+                            <span>${land.price} USDC</span>
                         </div>
-                        
                         <div className="modal-row">
                             <span className="modal-label">Annual Yield</span>
-                            <span className="modal-value" style={{color: '#00ff88'}}>{land.yield}%</span>
+                            <span style={{color: '#00ff88'}}>{land.yield}%</span>
                         </div>
-                        
                         <div className="modal-row">
                             <span className="modal-label">Daily Rent</span>
-                            <span className="modal-value" style={{color: '#00ff88'}}>${land.dailyRent}/day</span>
+                            <span style={{color: '#00ff88'}}>${land.dailyRent}/day</span>
                         </div>
-
-                        <button className="buy-btn" onClick={() => onBuy(land)}>
-                            Buy for ${land.price} USDC
-                        </button>
+                        {!land.owned && (
+                            <button className="buy-btn" onClick={() => {onBuy(land); onClose();}}>
+                                Buy for ${land.price} USDC
+                            </button>
+                        )}
                     </div>
                 </div>
             );
         }
 
-        // Map Component
-        function Map({ onParcelClick }) {
-            const mapContainer = useRef(null);
-            const map = useRef(null);
-            const markers = useRef([]);
-
-            useEffect(() => {
-                // Initialize Mapbox
-                mapboxgl.accessToken = 'pk.eyJ1IjoiZGVtbyIsImEiOiJja2V0b3V3b3YwMHBpMnJ0ZzB4M3ZvZ2lnIn0.demo_token';
-                
-                map.current = new mapboxgl.Map({
-                    container: mapContainer.current,
-                    style: 'mapbox://styles/mapbox/dark-v11',
-                    center: [0, 20],
-                    zoom: 2,
-                    projection: 'globe'
-                });
-
-                map.current.on('load', () => {
-                    // Add markers for available land
-                    MOCK_LAND.forEach(land => {
-                        const color = land.owned ? '#00ff88' : (land.rarity === 'epic' ? '#9945ff' : land.rarity === 'rare' ? '#00d4ff' : '#888');
-                        
-                        const marker = new mapboxgl.Marker({ color })
-                            .setLngLat([land.lng, land.lat])
-                            .setPopup(new mapboxgl.Popup().setHTML(`<h3>${land.name}</h3><p>$${land.price} - ${land.rarity}</p>`))
-                            .addTo(map.current);
-
-                        marker.getElement().addEventListener('click', () => {
-                            onParcelClick(land);
-                        });
-
-                        markers.current.push(marker);
-                    });
-                });
-
-                return () => {
-                    map.current?.remove();
-                };
-            }, [onParcelClick]);
-
-            return <div ref={mapContainer} id="map" />;
-        }
-
-        // Main App
         function App() {
-            const [activeTab, setActiveTab] = useState('map');
             const [selectedLand, setSelectedLand] = useState(null);
             const [lands, setLands] = useState(MOCK_LAND);
             const [walletConnected, setWalletConnected] = useState(false);
 
-            const ownedLand = lands.filter(l => l.owned);
-            const totalValue = ownedLand.reduce((sum, l) => sum + l.price, 0);
-            const dailyRent = ownedLand.reduce((sum, l) => sum + l.dailyRent, 0);
+            const owned = lands.filter(l => l.owned);
+            const totalValue = owned.reduce((sum, l) => sum + l.price, 0);
+            const dailyRent = owned.reduce((sum, l) => sum + l.dailyRent, 0);
 
             const handleBuy = (land) => {
-                // Simulate buying
-                const updatedLands = lands.map(l => 
-                    l.id === land.id ? { ...l, owned: true } : l
-                );
-                setLands(updatedLands);
-                setSelectedLand(null);
-                alert(`Bought ${land.name} for $${land.price} USDC!`);
+                setLands(lands.map(l => l.id === land.id ? {...l, owned: true} : l));
+                alert(`Bought ${land.name}!`);
             };
 
             return (
                 <div className="app">
                     <header className="header">
                         <div className="logo">PolyWorld</div>
-                        <nav className="nav">
-                            <div className={`nav-item ${activeTab === 'map' ? 'active' : ''}`} onClick={() => setActiveTab('map')}>
-                                World Map
-                            </div>
-                            <div className={`nav-item ${activeTab === 'portfolio' ? 'active' : ''}`} onClick={() => setActiveTab('portfolio')}>
-                                Portfolio
-                            </div>
-                            <div className={`nav-item ${activeTab === 'market' ? 'active' : ''}`} onClick={() => setActiveTab('market')}>
-                                Marketplace
-                            </div>
-                        </nav>
                         <button className="wallet-btn" onClick={() => setWalletConnected(!walletConnected)}>
                             {walletConnected ? '0x1234...5678' : 'Connect Wallet'}
                         </button>
@@ -511,17 +412,11 @@
 
                     <div className="main">
                         <aside className="sidebar">
-                            <Stats 
-                                totalLand={ownedLand.length} 
-                                totalValue={totalValue}
-                                dailyRent={dailyRent.toFixed(4)}
-                            />
+                            <Stats totalLand={owned.length} totalValue={totalValue} dailyRent={dailyRent.toFixed(4)} />
                             <LandList lands={lands} onSelect={setSelectedLand} />
                         </aside>
 
-                        <div className="map-container">
-                            <Map onParcelClick={setSelectedLand} />
-                        </div>
+                        <Globe lands={lands} onSelect={setSelectedLand} />
                     </div>
 
                     {selectedLand && (
@@ -535,8 +430,7 @@
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
 </html>
