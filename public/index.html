@@ -8,7 +8,6 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -39,36 +38,17 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .stats-bar {
-            display: flex;
-            gap: 2rem;
-            font-size: 0.9rem;
-        }
-        .stat-value {
-            color: #00d4ff;
-            font-weight: bold;
-        }
-        .wallet-btn {
-            background: linear-gradient(135deg, #00d4ff, #0099cc);
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            color: #000;
-            font-weight: bold;
-            cursor: pointer;
-        }
         .main {
             flex: 1;
             display: flex;
             position: relative;
         }
-        #globe-container {
+        #globe-canvas {
             flex: 1;
-            position: relative;
             background: radial-gradient(ellipse at center, #0a0a1f 0%, #000 100%);
         }
         .sidebar {
-            width: 380px;
+            width: 350px;
             background: rgba(20, 20, 30, 0.95);
             border-left: 1px solid #2a2a3e;
             padding: 1.5rem;
@@ -76,22 +56,18 @@
         }
         .land-item {
             background: #1a1a2e;
-            padding: 1rem;
-            border-radius: 12px;
+            padding: 0.75rem;
+            border-radius: 8px;
             border: 1px solid #2a2a3e;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
             cursor: pointer;
+            font-size: 0.85rem;
         }
-        .land-item:hover {
-            border-color: #00d4ff;
-        }
+        .land-item:hover { border-color: #00d4ff; }
         .modal-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -99,18 +75,18 @@
         }
         .modal {
             background: #1a1a2e;
-            border-radius: 16px;
+            border-radius: 12px;
             border: 1px solid #00d4ff;
-            padding: 2rem;
-            max-width: 400px;
+            padding: 1.5rem;
+            max-width: 350px;
             width: 90%;
         }
         .buy-btn {
             width: 100%;
             background: linear-gradient(135deg, #00d4ff, #0099cc);
             border: none;
-            padding: 1rem;
-            border-radius: 8px;
+            padding: 0.75rem;
+            border-radius: 6px;
             color: #000;
             font-weight: bold;
             cursor: pointer;
@@ -122,267 +98,331 @@
     <div id="root"></div>
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
-        const { latLngToCell, cellToLatLng, getHexagonEdgeLengthAvg, UNITS } = h3;
 
-        // Generate hexagon grid covering Earth
-        function generateHexGrid() {
+        // Generate dense hexagon grid - covering all possible land
+        function generateDenseHexGrid() {
             const hexagons = [];
             let id = 1;
             
-            // Generate hexagons at resolution 3 (~100km)
-            // Cover major land areas with sample points
-            const landPoints = [
-                // North America
-                {lat: 45, lng: -100}, {lat: 35, lng: -110}, {lat: 40, lng: -75},
-                {lat: 50, lng: -120}, {lat: 30, lng: -95}, {lat: 55, lng: -110},
-                // South America
-                {lat: -15, lng: -55}, {lat: -25, lng: -65}, {lat: -35, lng: -60},
-                // Europe
-                {lat: 50, lng: 10}, {lat: 45, lng: 5}, {lat: 55, lng: -5},
-                {lat: 40, lng: 15}, {lat: 52, lng: 20},
-                // Africa
-                {lat: 0, lng: 20}, {lat: -15, lng: 25}, {lat: -25, lng: 30},
-                {lat: 5, lng: 5}, {lat: -20, lng: 15},
-                // Asia
-                {lat: 35, lng: 105}, {lat: 25, lng: 80}, {lat: 55, lng: 85},
-                {lat: 40, lng: 70}, {lat: 30, lng: 120}, {lat: 45, lng: 130},
-                // Australia
-                {lat: -25, lng: 135}, {lat: -35, lng: 145},
-                // Remote/Premium locations
-                {lat: 65, lng: -18}, {lat: -80, lng: 0}, {lat: 20, lng: -155},
-            ];
-            
-            landPoints.forEach(point => {
-                try {
-                    const h3Index = latLngToCell(point.lat, point.lng, 3);
-                    const center = cellToLatLng(h3Index);
+            // Dense grid with 15-degree spacing
+            for (let lat = -75; lat <= 75; lat += 12) {
+                for (let lng = -180; lng < 180; lng += 15) {
+                    // Skip major ocean areas (simplified)
+                    const isOcean = (
+                        (lat > 10 && lat < 40 && lng > -130 && lng < -80) || // Pacific
+                        (lat > -50 && lat < -10 && lng > -140 && lng < -80) || // Pacific
+                        (lat > -60 && lat < -30 && lng > 0 && lng < 60) || // Atlantic south
+                        (lat > 20 && lat < 50 && lng > -60 && lng < -20) // Atlantic north
+                    );
                     
-                    // Determine rarity based on location
-                    let rarity = 'common';
-                    let price = 100;
-                    let yield_rate = 2.0;
-                    
-                    // Remote = rare/epic
-                    if (Math.abs(point.lat) > 60 || Math.abs(point.lat) < -60) {
-                        rarity = 'epic';
-                        price = 500 + Math.floor(Math.random() * 300);
-                        yield_rate = 4.0;
-                    } else if (Math.abs(point.lng) > 140 || Math.abs(point.lat) > 45) {
-                        rarity = 'rare';
-                        price = 200 + Math.floor(Math.random() * 100);
-                        yield_rate = 3.0;
-                    } else {
-                        price = 50 + Math.floor(Math.random() * 100);
+                    if (!isOcean || Math.random() > 0.7) { // Still add some ocean hexes
+                        // Determine rarity
+                        let rarity = 'common';
+                        let price = 50 + Math.floor(Math.random() * 100);
+                        let yield_rate = 2.0;
+                        
+                        // Polar = epic
+                        if (Math.abs(lat) > 65) {
+                            rarity = 'epic';
+                            price = 400 + Math.floor(Math.random() * 400);
+                            yield_rate = 4.0;
+                        }
+                        // High latitude = rare
+                        else if (Math.abs(lat) > 45 || Math.abs(lng) > 140) {
+                            rarity = 'rare';
+                            price = 150 + Math.floor(Math.random() * 150);
+                            yield_rate = 3.0;
+                        }
+                        
+                        hexagons.push({
+                            id: id++,
+                            lat,
+                            lng,
+                            name: `Hex-${lat > 0 ? 'N' : 'S'}${Math.abs(lat)}-${lng > 0 ? 'E' : 'W'}${Math.abs(lng)}`,
+                            rarity,
+                            price,
+                            yield: yield_rate,
+                            owned: id === 2,
+                            dailyRent: (price * (yield_rate / 100) / 365).toFixed(4)
+                        });
                     }
-                    
-                    hexagons.push({
-                        id: id++,
-                        h3Index,
-                        lat: center[0],
-                        lng: center[1],
-                        name: `Hex-${h3Index.slice(-6)}`,
-                        rarity,
-                        price,
-                        yield: yield_rate,
-                        owned: id === 2, // First one owned
-                        dailyRent: (price * (yield_rate / 100) / 365).toFixed(4)
-                    });
-                } catch(e) {}
-            });
-            
+                }
+            }
             return hexagons;
         }
 
-        const LAND_PARCELS = generateHexGrid();
+        const LAND_PARCELS = generateDenseHexGrid();
 
         function latLngToVector3(lat, lng, radius) {
             const phi = (90 - lat) * (Math.PI / 180);
             const theta = (lng + 180) * (Math.PI / 180);
             return new THREE.Vector3(
                 -(radius * Math.sin(phi) * Math.cos(theta)),
-                (radius * Math.cos(phi)),
-                (radius * Math.sin(phi) * Math.sin(theta))
+                radius * Math.cos(phi),
+                radius * Math.sin(phi) * Math.sin(theta)
             );
         }
 
         function Globe3D({ lands, onSelect }) {
-            const containerRef = useRef(null);
-            const markersRef = useRef([]);
+            const canvasRef = useRef(null);
+            const sceneRef = useRef(null);
+            const cameraRef = useRef(null);
+            const rendererRef = useRef(null);
+            const globeRef = useRef(null);
+            const markersGroupRef = useRef(null);
             const raycasterRef = useRef(new THREE.Raycaster());
             const mouseRef = useRef(new THREE.Vector2());
             const isDraggingRef = useRef(false);
+            const previousMouseRef = useRef({ x: 0, y: 0 });
+            const rotationRef = useRef({ x: 0, y: 0 });
 
             useEffect(() => {
+                if (!canvasRef.current) return;
+
+                // Scene setup
                 const scene = new THREE.Scene();
-                const camera = new THREE.PerspectiveCamera(45, containerRef.current.clientWidth / containerRef.current.clientHeight, 0.1, 1000);
-                camera.position.z = 2.5;
+                sceneRef.current = scene;
+                scene.background = new THREE.Color(0x000000);
 
-                const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-                renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-                containerRef.current.appendChild(renderer.domElement);
+                // Camera
+                const camera = new THREE.PerspectiveCamera(60, canvasRef.current.clientWidth / canvasRef.current.clientHeight, 0.1, 1000);
+                camera.position.z = 2.2;
+                cameraRef.current = camera;
 
-                // Earth
-                const earth = new THREE.Mesh(
-                    new THREE.SphereGeometry(1, 64, 64),
-                    new THREE.MeshPhongMaterial({
-                        color: 0x1a3a5e,
-                        emissive: 0x0a1a2e,
-                        emissiveIntensity: 0.5
-                    })
-                );
+                // Renderer
+                const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, antialias: true });
+                renderer.setSize(canvasRef.current.clientWidth, canvasRef.current.clientHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                rendererRef.current = renderer;
+
+                // Earth sphere
+                const earthGeometry = new THREE.SphereGeometry(1, 64, 64);
+                const earthMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x1a3a5e,
+                    emissive: 0x0a1a2e,
+                    emissiveIntensity: 0.3,
+                    shininess: 25
+                });
+                const earth = new THREE.Mesh(earthGeometry, earthMaterial);
                 scene.add(earth);
+                globeRef.current = earth;
 
-                // Grid
-                const grid = new THREE.Mesh(
-                    new THREE.SphereGeometry(1.005, 32, 32),
-                    new THREE.MeshBasicMaterial({
-                        color: 0x00d4ff,
-                        wireframe: true,
-                        transparent: true,
-                        opacity: 0.08
-                    })
-                );
+                // Wireframe grid
+                const gridGeometry = new THREE.SphereGeometry(1.008, 32, 32);
+                const gridMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00d4ff,
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.06
+                });
+                const grid = new THREE.Mesh(gridGeometry, gridMaterial);
                 scene.add(grid);
 
-                // Atmosphere
-                scene.add(new THREE.Mesh(
-                    new THREE.SphereGeometry(1.15, 32, 32),
-                    new THREE.MeshBasicMaterial({
-                        color: 0x00d4ff,
-                        transparent: true,
-                        opacity: 0.05,
-                        side: THREE.BackSide
-                    })
-                ));
+                // Atmosphere glow
+                const atmosGeometry = new THREE.SphereGeometry(1.12, 32, 32);
+                const atmosMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00d4ff,
+                    transparent: true,
+                    opacity: 0.04,
+                    side: THREE.BackSide
+                });
+                const atmosphere = new THREE.Mesh(atmosGeometry, atmosMaterial);
+                scene.add(atmosphere);
 
                 // Lights
-                scene.add(new THREE.AmbientLight(0x404040, 2));
-                scene.add(new THREE.DirectionalLight(0xffffff, 1).position.set(5, 3, 5));
+                scene.add(new THREE.AmbientLight(0x404060, 1.5));
+                const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+                dirLight.position.set(5, 3, 5);
+                scene.add(dirLight);
 
-                // Stars
+                // Starfield
                 const starsGeometry = new THREE.BufferGeometry();
-                const starsCount = 3000;
-                const posArray = new Float32Array(starsCount * 3);
-                for(let i = 0; i < starsCount * 3; i++) {
-                    posArray[i] = (Math.random() - 0.5) * 200;
+                const starsCount = 5000;
+                const positions = new Float32Array(starsCount * 3);
+                for (let i = 0; i < starsCount * 3; i++) {
+                    positions[i] = (Math.random() - 0.5) * 100;
                 }
-                starsGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-                scene.add(new THREE.Points(starsGeometry, new THREE.PointsMaterial({ size: 0.015, color: 0xffffff })));
+                starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                const stars = new THREE.Points(starsGeometry, new THREE.PointsMaterial({ size: 0.02, color: 0xffffff, transparent: true, opacity: 0.8 }));
+                scene.add(stars);
 
-                // Hexagon markers
-                lands.forEach(land => {
-                    const geometry = new THREE.CylinderGeometry(0.025, 0.025, 0.015, 6);
+                // Hexagon markers group
+                const markersGroup = new THREE.Group();
+                markersGroupRef.current = markersGroup;
+                scene.add(markersGroup);
+
+                // Create hexagon markers
+                lands.forEach((land, index) => {
+                    // Hexagon geometry
+                    const hexGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.012, 6);
                     const color = land.owned ? 0x00ff88 : 
                                  land.rarity === 'epic' ? 0x9945ff : 
-                                 land.rarity === 'rare' ? 0x00d4ff : 0x888888;
+                                 land.rarity === 'rare' ? 0x00d4ff : 0x666666;
                     
-                    const hex = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color }));
-                    const pos = latLngToVector3(land.lat, land.lng, 1.02);
+                    const hexMat = new THREE.MeshBasicMaterial({ color });
+                    const hex = new THREE.Mesh(hexGeo, hexMat);
+                    
+                    const pos = latLngToVector3(land.lat, land.lng, 1.015);
                     hex.position.copy(pos);
                     hex.lookAt(new THREE.Vector3(0, 0, 0));
                     hex.rotateX(Math.PI);
-                    hex.userData = { land };
-                    scene.add(hex);
-                    markersRef.current.push(hex);
+                    hex.userData = { land, id: land.id };
+                    markersGroup.add(hex);
 
-                    // Glow
-                    const glow = new THREE.Mesh(
-                        new THREE.CylinderGeometry(0.035, 0.035, 0.01, 6),
-                        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.25 })
-                    );
+                    // Glow ring for visibility
+                    const glowGeo = new THREE.RingGeometry(0.028, 0.032, 6);
+                    const glowMat = new THREE.MeshBasicMaterial({ 
+                        color, 
+                        transparent: true, 
+                        opacity: 0.4,
+                        side: THREE.DoubleSide
+                    });
+                    const glow = new THREE.Mesh(glowGeo, glowMat);
                     glow.position.copy(pos);
                     glow.lookAt(new THREE.Vector3(0, 0, 0));
-                    glow.rotateX(Math.PI);
-                    scene.add(glow);
+                    markersGroup.add(glow);
                 });
 
-                // Animation
+                console.log(`Created ${lands.length} hexagon markers`);
+
+                // Animation loop
                 let animationId;
                 const animate = () => {
                     animationId = requestAnimationFrame(animate);
+                    
                     if (!isDraggingRef.current) {
-                        earth.rotation.y += 0.0005;
-                        grid.rotation.y += 0.0005;
+                        rotationRef.current.y += 0.0003;
                     }
+                    
+                    earth.rotation.y = rotationRef.current.y;
+                    grid.rotation.y = rotationRef.current.y;
+                    markersGroup.rotation.y = rotationRef.current.y;
+                    
                     renderer.render(scene, camera);
                 };
                 animate();
 
-                // Events
-                const handleMouseDown = (e) => { isDraggingRef.current = true; };
-                const handleMouseUp = () => { isDraggingRef.current = false; };
-                const handleClick = (e) => {
-                    if (isDraggingRef.current) return;
-                    const rect = renderer.domElement.getBoundingClientRect();
-                    mouseRef.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-                    mouseRef.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-                    raycasterRef.current.setFromCamera(mouseRef.current, camera);
-                    const intersects = raycasterRef.current.intersectObjects(markersRef.current);
-                    if (intersects.length > 0) onSelect(intersects[0].object.userData.land);
+                // Mouse events
+                const handleMouseDown = (e) => {
+                    isDraggingRef.current = true;
+                    previousMouseRef.current = { x: e.clientX, y: e.clientY };
                 };
 
-                renderer.domElement.addEventListener('mousedown', handleMouseDown);
-                renderer.domElement.addEventListener('mouseup', handleMouseUp);
-                renderer.domElement.addEventListener('click', handleClick);
+                const handleMouseMove = (e) => {
+                    if (!isDraggingRef.current) return;
+                    const deltaX = e.clientX - previousMouseRef.current.x;
+                    rotationRef.current.y += deltaX * 0.005;
+                    previousMouseRef.current = { x: e.clientX, y: e.clientY };
+                };
+
+                const handleMouseUp = () => {
+                    isDraggingRef.current = false;
+                };
+
+                const handleClick = (e) => {
+                    if (isDraggingRef.current) return;
+                    
+                    const rect = canvasRef.current.getBoundingClientRect();
+                    mouseRef.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                    mouseRef.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+                    raycasterRef.current.setFromCamera(mouseRef.current, camera);
+                    
+                    const markerMeshes = markersGroup.children.filter(child => child.userData.land);
+                    const intersects = raycasterRef.current.intersectObjects(markerMeshes);
+
+                    if (intersects.length > 0) {
+                        const land = intersects[0].object.userData.land;
+                        console.log('Clicked:', land.name);
+                        onSelect(land);
+                    }
+                };
+
+                canvasRef.current.addEventListener('mousedown', handleMouseDown);
+                canvasRef.current.addEventListener('mousemove', handleMouseMove);
+                window.addEventListener('mouseup', handleMouseUp);
+                canvasRef.current.addEventListener('click', handleClick);
+
+                // Resize handler
+                const handleResize = () => {
+                    if (!canvasRef.current) return;
+                    camera.aspect = canvasRef.current.clientWidth / canvasRef.current.clientHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(canvasRef.current.clientWidth, canvasRef.current.clientHeight);
+                };
+                window.addEventListener('resize', handleResize);
 
                 return () => {
                     cancelAnimationFrame(animationId);
-                    renderer.domElement.removeEventListener('mousedown', handleMouseDown);
-                    renderer.domElement.removeEventListener('mouseup', handleMouseUp);
-                    renderer.domElement.removeEventListener('click', handleClick);
-                    containerRef.current?.removeChild(renderer.domElement);
+                    window.removeEventListener('resize', handleResize);
+                    window.removeEventListener('mouseup', handleMouseUp);
+                    if (canvasRef.current) {
+                        canvasRef.current.removeEventListener('mousedown', handleMouseDown);
+                        canvasRef.current.removeEventListener('mousemove', handleMouseMove);
+                        canvasRef.current.removeEventListener('click', handleClick);
+                    }
+                    renderer.dispose();
                 };
             }, [lands, onSelect]);
 
-            return <div id="globe-container" ref={containerRef} style={{flex: 1}} />;
+            return <canvas ref={canvasRef} id="globe-canvas" style={{width: '100%', height: '100%'}} />;
         }
 
         function App() {
             const [selectedLand, setSelectedLand] = useState(null);
-            const [lands, setLands] = useState(LAND_PARCELS);
+            const [lands] = useState(LAND_PARCELS);
 
             const owned = lands.filter(l => l.owned);
             const totalValue = owned.reduce((sum, l) => sum + l.price, 0);
             const dailyRent = owned.reduce((sum, l) => sum + parseFloat(l.dailyRent), 0).toFixed(4);
 
             const handleBuy = (land) => {
-                setLands(lands.map(l => l.id === land.id ? {...l, owned: true} : l));
-                alert(`Bought ${land.name}!`);
+                land.owned = true;
+                alert(`Bought ${land.name} for $${land.price}!`);
+                setSelectedLand(null);
             };
 
             return (
                 <div className="app">
                     <header className="header">
                         <div className="logo">PolyWorld</div>
-                        <div className="stats-bar">
-                            <div>Land: <span className="stat-value">{owned.length}/{lands.length}</span></div>
-                            <div>Value: <span className="stat-value">${totalValue.toLocaleString()}</span></div>
-                            <div>Daily: <span className="stat-value" style={{color: '#00ff88'}}>${dailyRent}</span></div>
+                        <div style={{display: 'flex', gap: '2rem'}}>
+                            <span>Hexagons: <strong style={{color: '#00d4ff'}}>{lands.length}</strong></span>
+                            <span>Owned: <strong style={{color: '#00ff88'}}>{owned.length}</strong></span>
+                            <span>Value: <strong style={{color: '#00d4ff'}}>${totalValue.toLocaleString()}</strong></span>
+                            <span>Daily: <strong style={{color: '#00ff88'}}>${dailyRent}</strong></span>
                         </div>
-                        <button className="wallet-btn">Connect Wallet</button>
+                        <button className="wallet-btn" style={{background: 'linear-gradient(135deg, #00d4ff, #0099cc)', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', color: '#000', fontWeight: 'bold'}}>
+                            Connect
+                        </button>
                     </header>
 
                     <div className="main">
                         <Globe3D lands={lands} onSelect={setSelectedLand} />
                         <aside className="sidebar">
-                            <h3 style={{color: '#888', marginBottom: '1rem', textTransform: 'uppercase', fontSize: '0.9rem'}}>
-                                Available Hexagons
+                            <h3 style={{color: '#888', marginBottom: '1rem', fontSize: '0.9rem', textTransform: 'uppercase'}}>
+                                All Hexagons ({lands.length})
                             </h3>
-                            <div style={{marginBottom: '1rem', fontSize: '0.85rem', color: '#666'}}>
-                                {lands.length} hexagons covering all land areas. Click on globe to buy.
+                            <div style={{fontSize: '0.8rem', color: '#666', marginBottom: '1rem'}}>
+                                Click any hexagon on the globe to view details
                             </div>
-                            <div>
-                                {lands.filter(l => !l.owned).slice(0, 20).map(land => (
+                            <div style={{maxHeight: 'calc(100vh - 200px)', overflowY: 'auto'}}>
+                                {lands.slice(0, 50).map(land => (
                                     <div key={land.id} className="land-item" onClick={() => setSelectedLand(land)}>
                                         <div style={{display: 'flex', justifyContent: 'space-between'}}>
                                             <span>{land.name}</span>
-                                            <span style={{color: land.rarity === 'epic' ? '#9945ff' : land.rarity === 'rare' ? '#00d4ff' : '#888', textTransform: 'uppercase', fontSize: '0.7rem'}}>{land.rarity}</span>
+                                            <span style={{color: land.rarity === 'epic' ? '#9945ff' : land.rarity === 'rare' ? '#00d4ff' : '#888', fontSize: '0.7rem', textTransform: 'uppercase'}}>{land.rarity}</span>
                                         </div>
-                                        <div style={{fontSize: '0.8rem', color: '#888', marginTop: '0.25rem'}}>
+                                        <div style={{fontSize: '0.75rem', color: '#888', marginTop: '0.25rem'}}>
                                             ${land.price} · <span style={{color: '#00ff88'}}>+${land.dailyRent}/day</span>
                                         </div>
                                     </div>
                                 ))}
+                                {lands.length > 50 && (
+                                    <div style={{textAlign: 'center', color: '#666', padding: '1rem', fontSize: '0.8rem'}}>
+                                        ... and {lands.length - 50} more hexagons
+                                    </div>
+                                )}
                             </div>
                         </aside>
                     </div>
@@ -391,12 +431,13 @@
                         <div className="modal-overlay" onClick={() => setSelectedLand(null)}>
                             <div className="modal" onClick={e => e.stopPropagation()}>
                                 <h2 style={{color: '#00d4ff', marginBottom: '1rem'}}>{selectedLand.name}</h2>
-                                <div style={{marginBottom: '0.5rem'}}>Rarity: <span style={{textTransform: 'capitalize', color: selectedLand.rarity === 'epic' ? '#9945ff' : selectedLand.rarity === 'rare' ? '#00d4ff' : '#888'}}>{selectedLand.rarity}</span></div>
+                                <div style={{marginBottom: '0.5rem'}}>Coordinates: {selectedLand.lat}°, {selectedLand.lng}°</div>
+                                <div style={{marginBottom: '0.5rem'}}>Rarity: <span style={{color: selectedLand.rarity === 'epic' ? '#9945ff' : selectedLand.rarity === 'rare' ? '#00d4ff' : '#888'}}>{selectedLand.rarity}</span></div>
                                 <div style={{marginBottom: '0.5rem'}}>Price: ${selectedLand.price} USDC</div>
                                 <div style={{marginBottom: '0.5rem'}}>Yield: <span style={{color: '#00ff88'}}>{selectedLand.yield}%</span></div>
-                                <div style={{marginBottom: '1rem'}}>Daily Rent: <span style={{color: '#00ff88'}}>${selectedLand.dailyRent}</span></div>
+                                <div style={{marginBottom: '1rem'}}>Daily: <span style={{color: '#00ff88'}}>${selectedLand.dailyRent}</span></div>
                                 {!selectedLand.owned && (
-                                    <button className="buy-btn" onClick={() => {handleBuy(selectedLand); setSelectedLand(null);}}>
+                                    <button className="buy-btn" onClick={() => handleBuy(selectedLand)}>
                                         Buy for ${selectedLand.price} USDC
                                     </button>
                                 )}
