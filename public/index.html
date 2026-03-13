@@ -7,7 +7,6 @@
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/@solana/web3.js@1.87.0/lib/index.iife.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -31,208 +30,339 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
         .modal { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; border: 1px solid #00d4ff; padding: 2rem; max-width: 420px; width: 90%; }
         .buy-btn { width: 100%; background: linear-gradient(135deg, #00d4ff, #0099cc); border: none; padding: 1rem; border-radius: 8px; color: #000; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 1rem; }
-        .hex-marker { width: 14px; height: 14px; background: currentColor; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); border: 1px solid rgba(255,255,255,0.5); cursor: pointer; transition: transform 0.2s; }
-        .hex-marker:hover { transform: scale(1.5); }
-        .loading { display: flex; align-items: center; justify-content: center; height: 100px; color: #00d4ff; }
+        .hex-marker { width: 12px; height: 12px; background: currentColor; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); border: 1px solid rgba(255,255,255,0.5); cursor: pointer; transition: transform 0.2s; }
+        .hex-marker:hover { transform: scale(1.8); }
     </style>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
-        const { Connection, PublicKey, LAMPORTS_PER_SOL } = solanaWeb3;
+        const { useState, useEffect } = React;
 
-        // COMPREHENSIVE LAND MASK - Only places hexagons on actual land
-        function isLand(lat, lng) {
-            // Normalize longitude
-            lng = ((lng + 180) % 360) - 180;
+        // PRECISE LAND COORDINATES - No oceans, only actual land
+        const LAND_COORDINATES = [
+            // NORTH AMERICA - Dense city coordinates
+            {lat: 40.71, lng: -74.00, name: "New York", pop: "high"},
+            {lat: 34.05, lng: -118.24, name: "Los Angeles", pop: "high"},
+            {lat: 41.87, lng: -87.62, name: "Chicago", pop: "high"},
+            {lat: 29.76, lng: -95.36, name: "Houston", pop: "high"},
+            {lat: 33.44, lng: -112.07, name: "Phoenix", pop: "high"},
+            {lat: 39.95, lng: -75.16, name: "Philadelphia", pop: "high"},
+            {lat: 29.42, lng: -98.49, name: "San Antonio", pop: "high"},
+            {lat: 32.77, lng: -96.79, name: "Dallas", pop: "high"},
+            {lat: 37.33, lng: -121.88, name: "San Jose", pop: "high"},
+            {lat: 30.26, lng: -97.74, name: "Austin", pop: "high"},
+            {lat: 47.60, lng: -122.33, name: "Seattle", pop: "high"},
+            {lat: 39.73, lng: -104.99, name: "Denver", pop: "high"},
+            {lat: 25.76, lng: -80.19, name: "Miami", pop: "high"},
+            {lat: 45.51, lng: -122.67, name: "Portland", pop: "high"},
+            {lat: 38.90, lng: -77.03, name: "Washington DC", pop: "high"},
+            {lat: 37.77, lng: -122.41, name: "San Francisco", pop: "high"},
+            {lat: 33.83, lng: -117.91, name: "Anaheim", pop: "high"},
+            {lat: 35.22, lng: -80.84, name: "Charlotte", pop: "high"},
+            {lat: 32.71, lng: -117.16, name: "San Diego", pop: "high"},
+            {lat: 36.16, lng: -115.13, name: "Las Vegas", pop: "high"},
+            {lat: 39.96, lng: -82.99, name: "Columbus", pop: "medium"},
+            {lat: 35.46, lng: -97.51, name: "Oklahoma City", pop: "medium"},
+            {lat: 42.33, lng: -83.04, name: "Detroit", pop: "medium"},
+            {lat: 39.28, lng: -76.61, name: "Baltimore", pop: "medium"},
+            {lat: 43.03, lng: -76.14, name: "Syracuse", pop: "medium"},
+            {lat: 44.97, lng: -93.26, name: "Minneapolis", pop: "medium"},
+            {lat: 33.52, lng: -86.80, name: "Birmingham", pop: "medium"},
+            {lat: 39.10, lng: -84.51, name: "Cincinnati", pop: "medium"},
+            {lat: 41.25, lng: -95.93, name: "Omaha", pop: "medium"},
+            {lat: 43.61, lng: -116.20, name: "Boise", pop: "low"},
+            {lat: 64.83, lng: -147.71, name: "Fairbanks", pop: "low"},
+            {lat: 58.30, lng: -134.41, name: "Juneau", pop: "low"},
+            {lat: 21.30, lng: -157.85, name: "Honolulu", pop: "medium"},
             
-            // Define land regions (continents and major islands)
-            const landRegions = [
-                // NORTH AMERICA
-                { name: "North America", bounds: [{lat: 15, lng: -170}, {lat: 15, lng: -50}, {lat: 75, lng: -50}, {lat: 75, lng: -170}] },
-                
-                // SOUTH AMERICA  
-                { name: "South America", bounds: [{lat: -60, lng: -85}, {lat: -60, lng: -30}, {lat: 15, lng: -30}, {lat: 15, lng: -85}] },
-                
-                // EUROPE
-                { name: "Europe", bounds: [{lat: 35, lng: -25}, {lat: 35, lng: 45}, {lat: 72, lng: 45}, {lat: 72, lng: -25}] },
-                
-                // AFRICA
-                { name: "Africa", bounds: [{lat: -40, lng: -20}, {lat: -40, lng: 55}, {lat: 38, lng: 55}, {lat: 38, lng: -20}] },
-                
-                // ASIA (mainland)
-                { name: "Asia", bounds: [{lat: 5, lng: 40}, {lat: 5, lng: 180}, {lat: 77, lng: 180}, {lat: 77, lng: 40}] },
-                
-                // AUSTRALIA
-                { name: "Australia", bounds: [{lat: -45, lng: 110}, {lat: -45, lng: 155}, {lat: -10, lng: 155}, {lat: -10, lng: 110}] },
-                
-                // GREENLAND
-                { name: "Greenland", bounds: [{lat: 60, lng: -75}, {lat: 60, lng: -12}, {lat: 84, lng: -12}, {lat: 84, lng: -75}] },
-                
-                // NEW ZEALAND
-                { name: "New Zealand", bounds: [{lat: -48, lng: 165}, {lat: -48, lng: 179}, {lat: -34, lng: 179}, {lat: -34, lng: 165}] },
-                
-                // MADAGASCAR
-                { name: "Madagascar", bounds: [{lat: -26, lng: 43}, {lat: -26, lng: 51}, {lat: -12, lng: 51}, {lat: -12, lng: 43}] },
-                
-                // JAPAN
-                { name: "Japan", bounds: [{lat: 30, lng: 129}, {lat: 30, lng: 146}, {lat: 46, lng: 146}, {lat: 46, lng: 129}] },
-                
-                // UK & IRELAND
-                { name: "UK", bounds: [{lat: 50, lng: -11}, {lat: 50, lng: 2}, {lat: 59, lng: 2}, {lat: 59, lng: -11}] },
-                
-                // ICELAND
-                { name: "Iceland", bounds: [{lat: 63, lng: -25}, {lat: 63, lng: -13}, {lat: 67, lng: -13}, {lat: 67, lng: -25}] },
-                
-                // CARIBBEAN / CENTRAL AMERICA
-                { name: "Caribbean", bounds: [{lat: 7, lng: -95}, {lat: 7, lng: -58}, {lat: 28, lng: -58}, {lat: 28, lng: -95}] },
-                
-                // INDONESIA / MALAYSIA
-                { name: "Indonesia", bounds: [{lat: -11, lng: 95}, {lat: -11, lng: 142}, {lat: 7, lng: 142}, {lat: 7, lng: 95}] },
-                
-                // PHILIPPINES
-                { name: "Philippines", bounds: [{lat: 5, lng: 117}, {lat: 5, lng: 127}, {lat: 20, lng: 127}, {lat: 20, lng: 117}] },
-                
-                // PAPUA NEW GUINEA
-                { name: "PNG", bounds: [{lat: -12, lng: 141}, {lat: -12, lng: 157}, {lat: 0, lng: 157}, {lat: 0, lng: 141}] },
-                
-                // SRI LANKA
-                { name: "Sri Lanka", bounds: [{lat: 6, lng: 80}, {lat: 6, lng: 82}, {lat: 10, lng: 82}, {lat: 10, lng: 80}] },
-                
-                // TAIWAN
-                { name: "Taiwan", bounds: [{lat: 22, lng: 120}, {lat: 22, lng: 122}, {lat: 26, lng: 122}, {lat: 26, lng: 120}] },
-                
-                // HAWAII
-                { name: "Hawaii", bounds: [{lat: 19, lng: -155}, {lat: 19, lng: -154}, {lat: 20, lng: -154}, {lat: 20, lng: -155}] },
-                
-                // FIJI
-                { name: "Fiji", bounds: [{lat: -19, lng: 177}, {lat: -19, lng: 179}, {lat: -16, lng: 179}, {lat: -16, lng: 177}] },
-                
-                // MEDITERRANEAN ISLANDS (Sicily, Sardinia, etc)
-                { name: "Med Islands", bounds: [{lat: 35, lng: 8}, {lat: 35, lng: 30}, {lat: 47, lng: 30}, {lat: 47, lng: 8}] },
-                
-                // ALASKA
-                { name: "Alaska", bounds: [{lat: 51, lng: -179}, {lat: 51, lng: -130}, {lat: 72, lng: -130}, {lat: 72, lng: -179}] },
-            ];
+            // CANADA
+            {lat: 43.65, lng: -79.38, name: "Toronto", pop: "high"},
+            {lat: 45.50, lng: -73.56, name: "Montreal", pop: "high"},
+            {lat: 49.28, lng: -123.12, name: "Vancouver", pop: "high"},
+            {lat: 51.04, lng: -114.07, name: "Calgary", pop: "medium"},
+            {lat: 53.54, lng: -113.49, name: "Edmonton", pop: "medium"},
             
-            // Check if point is in any land region
-            for (const region of landRegions) {
-                const b = region.bounds;
-                if (lat >= b[0].lat && lat <= b[2].lat && 
-                    lng >= b[0].lng && lng <= b[1].lng) {
-                    return true;
-                }
-            }
+            // MEXICO & CENTRAL AMERICA
+            {lat: 19.43, lng: -99.13, name: "Mexico City", pop: "high"},
+            {lat: 20.65, lng: -103.34, name: "Guadalajara", pop: "high"},
+            {lat: 25.68, lng: -100.31, name: "Monterrey", pop: "high"},
+            {lat: 21.16, lng: -86.85, name: "Cancun", pop: "medium"},
+            {lat: 14.63, lng: -90.50, name: "Guatemala City", pop: "medium"},
+            {lat: 13.69, lng: -89.21, name: "San Salvador", pop: "medium"},
+            {lat: 9.92, lng: -84.09, name: "San Jose CR", pop: "medium"},
+            {lat: 8.98, lng: -79.51, name: "Panama City", pop: "medium"},
             
-            // Detailed exclusions (water within bounding boxes)
-            const waterExclusions = [
-                // Great Lakes (North America)
-                { latMin: 41, latMax: 49, lngMin: -93, lngMax: -82 },
-                // Hudson Bay
-                { latMin: 52, latMax: 63, lngMin: -95, lngMax: -77 },
-                // Baltic Sea
-                { latMin: 53, latMax: 66, lngMin: 10, lngMax: 30 },
-                // Mediterranean Sea (main body)
-                { latMin: 30, latMax: 38, lngMin: 0, lngMax: 35 },
-                // Red Sea
-                { latMin: 12, latMax: 30, lngMin: 32, lngMax: 45 },
-                // Persian Gulf
-                { latMin: 24, latMax: 31, lngMin: 47, lngMax: 57 },
-                // Black Sea
-                { latMin: 41, latMax: 47, lngMin: 28, lngMax: 42 },
-                // Caspian Sea
-                { latMin: 37, latMax: 47, lngMin: 46, lngMax: 55 },
-                // Lake Victoria
-                { latMin: -4, latMax: 1, lngMin: 32, lngMax: 37 },
-            ];
+            // SOUTH AMERICA
+            {lat: -23.55, lng: -46.63, name: "Sao Paulo", pop: "high"},
+            {lat: -22.90, lng: -43.17, name: "Rio de Janeiro", pop: "high"},
+            {lat: -19.91, lng: -43.93, name: "Belo Horizonte", pop: "high"},
+            {lat: -3.73, lng: -38.52, name: "Fortaleza", pop: "high"},
+            {lat: -8.05, lng: -34.88, name: "Recife", pop: "high"},
+            {lat: -12.97, lng: -38.51, name: "Salvador", pop: "high"},
+            {lat: -34.60, lng: -58.38, name: "Buenos Aires", pop: "high"},
+            {lat: -33.44, lng: -70.66, name: "Santiago", pop: "high"},
+            {lat: -12.04, lng: -77.04, name: "Lima", pop: "high"},
+            {lat: 4.71, lng: -74.07, name: "Bogota", pop: "high"},
+            {lat: 6.24, lng: -75.57, name: "Medellin", pop: "high"},
+            {lat: 10.48, lng: -66.90, name: "Caracas", pop: "high"},
+            {lat: -0.18, lng: -78.46, name: "Quito", pop: "medium"},
+            {lat: -17.78, lng: -63.18, name: "Santa Cruz", pop: "medium"},
+            {lat: -25.26, lng: -57.57, name: "Asuncion", pop: "medium"},
+            {lat: -34.90, lng: -56.16, name: "Montevideo", pop: "medium"},
             
-            for (const water of waterExclusions) {
-                if (lat >= water.latMin && lat <= water.latMax && 
-                    lng >= water.lngMin && lng <= water.lngMax) {
-                    return false;
-                }
-            }
+            // EUROPE
+            {lat: 51.50, lng: -0.12, name: "London", pop: "high"},
+            {lat: 53.48, lng: -2.24, name: "Manchester", pop: "high"},
+            {lat: 55.95, lng: -3.18, name: "Edinburgh", pop: "medium"},
+            {lat: 48.85, lng: 2.35, name: "Paris", pop: "high"},
+            {lat: 43.29, lng: 5.37, name: "Marseille", pop: "medium"},
+            {lat: 50.93, lng: 6.95, name: "Cologne", pop: "high"},
+            {lat: 52.52, lng: 13.40, name: "Berlin", pop: "high"},
+            {lat: 48.13, lng: 11.58, name: "Munich", pop: "high"},
+            {lat: 53.55, lng: 9.99, name: "Hamburg", pop: "high"},
+            {lat: 52.37, lng: 4.89, name: "Amsterdam", pop: "high"},
+            {lat: 41.90, lng: 12.49, name: "Rome", pop: "high"},
+            {lat: 45.46, lng: 9.19, name: "Milan", pop: "high"},
+            {lat: 40.41, lng: -3.70, name: "Madrid", pop: "high"},
+            {lat: 41.38, lng: 2.16, name: "Barcelona", pop: "high"},
+            {lat: 59.91, lng: 10.75, name: "Oslo", pop: "medium"},
+            {lat: 59.32, lng: 18.06, name: "Stockholm", pop: "medium"},
+            {lat: 55.67, lng: 12.56, name: "Copenhagen", pop: "medium"},
+            {lat: 60.16, lng: 24.93, name: "Helsinki", pop: "medium"},
+            {lat: 52.22, lng: 21.01, name: "Warsaw", pop: "high"},
+            {lat: 50.07, lng: 14.43, name: "Prague", pop: "high"},
+            {lat: 48.20, lng: 16.37, name: "Vienna", pop: "high"},
+            {lat: 47.49, lng: 19.04, name: "Budapest", pop: "high"},
+            {lat: 44.78, lng: 20.44, name: "Belgrade", pop: "medium"},
+            {lat: 42.69, lng: 23.32, name: "Sofia", pop: "medium"},
+            {lat: 37.98, lng: 23.72, name: "Athens", pop: "high"},
+            {lat: 41.00, lng: 28.97, name: "Istanbul", pop: "high"},
+            {lat: 55.75, lng: 37.61, name: "Moscow", pop: "high"},
+            {lat: 59.93, lng: 30.33, name: "St Petersburg", pop: "high"},
+            {lat: 56.83, lng: 60.60, name: "Yekaterinburg", pop: "medium"},
+            {lat: 54.98, lng: 73.36, name: "Omsk", pop: "medium"},
+            {lat: 64.14, lng: -21.94, name: "Reykjavik", pop: "low"},
+            {lat: 60.16, lng: -1.14, name: "Shetland", pop: "low"},
             
-            return false;
-        }
+            // AFRICA
+            {lat: 30.04, lng: 31.23, name: "Cairo", pop: "high"},
+            {lat: 31.20, lng: 29.91, name: "Alexandria", pop: "high"},
+            {lat: -1.29, lng: 36.82, name: "Nairobi", pop: "high"},
+            {lat: -6.79, lng: 39.20, name: "Dar es Salaam", pop: "high"},
+            {lat: -26.20, lng: 28.04, name: "Johannesburg", pop: "high"},
+            {lat: -33.92, lng: 18.42, name: "Cape Town", pop: "high"},
+            {lat: -29.85, lng: 31.02, name: "Durban", pop: "high"},
+            {lat: -25.74, lng: 28.22, name: "Pretoria", pop: "high"},
+            {lat: 6.52, lng: 3.37, name: "Lagos", pop: "high"},
+            {lat: 9.08, lng: 7.39, name: "Abuja", pop: "high"},
+            {lat: 5.60, lng: -0.18, name: "Accra", pop: "medium"},
+            {lat: 14.71, lng: -17.46, name: "Dakar", pop: "medium"},
+            {lat: 36.75, lng: 3.05, name: "Algiers", pop: "high"},
+            {lat: 33.57, lng: -7.58, name: "Casablanca", pop: "high"},
+            {lat: 34.02, lng: -6.84, name: "Rabat", pop: "medium"},
+            {lat: -4.32, lng: 15.31, name: "Kinshasa", pop: "high"},
+            {lat: -11.68, lng: 27.48, name: "Lubumbashi", pop: "medium"},
+            {lat: -15.41, lng: 28.28, name: "Lusaka", pop: "medium"},
+            {lat: -17.82, lng: 31.05, name: "Harare", pop: "medium"},
+            {lat: -13.96, lng: 33.77, name: "Lilongwe", pop: "low"},
+            {lat: 0.31, lng: 32.58, name: "Kampala", pop: "high"},
+            {lat: -1.94, lng: 30.05, name: "Kigali", pop: "medium"},
+            {lat: -3.36, lng: 29.35, name: "Bujumbura", pop: "low"},
+            
+            // ASIA
+            {lat: 35.67, lng: 139.65, name: "Tokyo", pop: "high"},
+            {lat: 34.69, lng: 135.50, name: "Osaka", pop: "high"},
+            {lat: 43.06, lng: 141.35, name: "Sapporo", pop: "medium"},
+            {lat: 39.90, lng: 116.40, name: "Beijing", pop: "high"},
+            {lat: 31.23, lng: 121.47, name: "Shanghai", pop: "high"},
+            {lat: 22.54, lng: 114.05, name: "Shenzhen", pop: "high"},
+            {lat: 23.12, lng: 113.25, name: "Guangzhou", pop: "high"},
+            {lat: 30.57, lng: 104.06, name: "Chengdu", pop: "high"},
+            {lat: 28.22, lng: 112.93, name: "Changsha", pop: "high"},
+            {lat: 25.03, lng: 121.56, name: "Taipei", pop: "high"},
+            {lat: 22.31, lng: 114.16, name: "Hong Kong", pop: "high"},
+            {lat: 37.56, lng: 126.97, name: "Seoul", pop: "high"},
+            {lat: 35.17, lng: 129.07, name: "Busan", pop: "high"},
+            {lat: 1.35, lng: 103.81, name: "Singapore", pop: "high"},
+            {lat: 3.13, lng: 101.68, name: "Kuala Lumpur", pop: "high"},
+            {lat: 13.75, lng: 100.50, name: "Bangkok", pop: "high"},
+            {lat: 28.61, lng: 77.20, name: "New Delhi", pop: "high"},
+            {lat: 19.07, lng: 72.87, name: "Mumbai", pop: "high"},
+            {lat: 12.97, lng: 77.59, name: "Bangalore", pop: "high"},
+            {lat: 13.08, lng: 80.27, name: "Chennai", pop: "high"},
+            {lat: 22.57, lng: 88.36, name: "Kolkata", pop: "high"},
+            {lat: 17.38, lng: 78.48, name: "Hyderabad", pop: "high"},
+            {lat: 18.52, lng: 73.85, name: "Pune", pop: "high"},
+            {lat: 23.02, lng: 72.57, name: "Ahmedabad", pop: "high"},
+            {lat: 24.86, lng: 67.00, name: "Karachi", pop: "high"},
+            {lat: 31.52, lng: 74.35, name: "Lahore", pop: "high"},
+            {lat: 33.68, lng: 73.04, name: "Islamabad", pop: "medium"},
+            {lat: 23.81, lng: 90.41, name: "Dhaka", pop: "high"},
+            {lat: 27.71, lng: 85.32, name: "Kathmandu", pop: "medium"},
+            {lat: 6.92, lng: 79.86, name: "Colombo", pop: "medium"},
+            {lat: 41.71, lng: 44.78, name: "Tbilisi", pop: "medium"},
+            {lat: 40.40, lng: 49.86, name: "Baku", pop: "medium"},
+            {lat: 40.17, lng: 44.50, name: "Yerevan", pop: "medium"},
+            {lat: 25.20, lng: 55.27, name: "Dubai", pop: "high"},
+            {lat: 24.45, lng: 54.37, name: "Abu Dhabi", pop: "medium"},
+            {lat: 21.28, lng: 39.18, name: "Jeddah", pop: "high"},
+            {lat: 24.71, lng: 46.67, name: "Riyadh", pop: "high"},
+            {lat: 32.08, lng: 34.78, name: "Tel Aviv", pop: "high"},
+            {lat: 33.31, lng: 44.36, name: "Baghdad", pop: "high"},
+            {lat: 35.68, lng: 51.38, name: "Tehran", pop: "high"},
+            {lat: 34.52, lng: 69.17, name: "Kabul", pop: "medium"},
+            {lat: 41.29, lng: 69.24, name: "Tashkent", pop: "medium"},
+            {lat: 43.22, lng: 76.84, name: "Almaty", pop: "medium"},
+            {lat: 27.47, lng: 89.63, name: "Thimphu", pop: "low"},
+            {lat: 4.17, lng: 73.50, name: "Male", pop: "low"},
+            
+            // AUSTRALIA & OCEANIA
+            {lat: -33.86, lng: 151.20, name: "Sydney", pop: "high"},
+            {lat: -37.81, lng: 144.96, name: "Melbourne", pop: "high"},
+            {lat: -27.46, lng: 153.02, name: "Brisbane", pop: "high"},
+            {lat: -31.95, lng: 115.86, name: "Perth", pop: "medium"},
+            {lat: -34.92, lng: 138.60, name: "Adelaide", pop: "medium"},
+            {lat: -41.28, lng: 174.77, name: "Wellington", pop: "medium"},
+            {lat: -36.84, lng: 174.74, name: "Auckland", pop: "medium"},
+            {lat: -17.73, lng: 168.32, name: "Port Vila", pop: "low"},
+            {lat: -18.12, lng: 178.44, name: "Suva", pop: "low"},
+            {lat: -13.83, lng: -171.76, name: "Apia", pop: "low"},
+            
+            // REMOTE/LOW POP (added as COMMON)
+            {lat: 78.22, lng: 15.65, name: "Svalbard", pop: "low"},
+            {lat: 64.18, lng: -51.72, name: "Nuuk", pop: "low"},
+            {lat: -54.28, lng: 158.96, name: "Macquarie Island", pop: "low"},
+            {lat: -77.84, lng: 166.68, name: "McMurdo Station", pop: "low"},
+            {lat: -90.00, lng: 0.00, name: "South Pole", pop: "low"},
+            {lat: 82.50, lng: -62.30, name: "Alert", pop: "low"},
+        ];
 
-        // Generate COMPLETE land coverage - no ocean hexes
+        // Generate land hexagons - FLIPPED RARITY (populated = rare/epic)
         function generateLandHexagons() {
             const hexagons = [];
-            let id = 1;
             
-            // Dense 5-degree grid for complete coverage
-            for (let lat = -75; lat <= 80; lat += 5) {
-                for (let lng = -180; lng < 180; lng += 6) {
-                    // Check if this point is on land
-                    if (isLand(lat, lng)) {
-                        // Add some variation to position
-                        const finalLat = lat + (Math.random() - 0.5) * 2;
-                        const finalLng = lng + (Math.random() - 0.5) * 2.5;
-                        
-                        // Determine rarity based on location
-                        let rarity = 'common';
-                        let price = 15 + Math.floor(Math.random() * 50);
-                        let yield_rate = 2.0;
-                        
-                        // Polar regions = epic
-                        if (Math.abs(lat) > 65) {
-                            rarity = 'epic';
-                            price = 200 + Math.floor(Math.random() * 300);
-                            yield_rate = 4.0;
-                        }
-                        // Desert/remote = rare
-                        else if (Math.abs(lat) > 45 || Math.abs(lng) > 130 || 
-                                 (Math.abs(lat) < 25 && Math.abs(lng) < 60 && Math.abs(lat) > 15)) {
-                            rarity = 'rare';
-                            price = 60 + Math.floor(Math.random() * 100);
-                            yield_rate = 3.0;
-                        }
-                        
-                        hexagons.push({
-                            id: id++,
-                            lat: finalLat,
-                            lng: finalLng,
-                            name: `Hex-${id.toString().padStart(4, '0')}`,
-                            rarity,
-                            price,
-                            yield: yield_rate,
-                            owned: id === 2,
-                            dailyRent: (price * (yield_rate / 100) / 365).toFixed(4)
-                        });
-                    }
+            LAND_COORDINATES.forEach((coord, index) => {
+                // FLIPPED: High population = RARE/Epic, Low population = COMMON
+                let rarity, price, yield_rate;
+                
+                if (coord.pop === "high") {
+                    // Cities = EPIC (most valuable)
+                    rarity = "epic";
+                    price = 500 + Math.floor(Math.random() * 500);
+                    yield_rate = 4.0;
+                } else if (coord.pop === "medium") {
+                    // Medium cities = RARE
+                    rarity = "rare";
+                    price = 200 + Math.floor(Math.random() * 200);
+                    yield_rate = 3.0;
+                } else {
+                    // Remote = COMMON (least valuable)
+                    rarity = "common";
+                    price = 50 + Math.floor(Math.random() * 100);
+                    yield_rate = 2.0;
                 }
-            }
+                
+                hexagons.push({
+                    id: index + 1,
+                    lat: coord.lat,
+                    lng: coord.lng,
+                    name: coord.name,
+                    rarity,
+                    price,
+                    yield: yield_rate,
+                    owned: index === 0,
+                    population: coord.pop,
+                    dailyRent: (price * (yield_rate / 100) / 365).toFixed(4)
+                });
+            });
             
-            console.log(`Generated ${hexagons.length} land hexagons`);
             return hexagons;
         }
 
         const LAND_PARCELS = generateLandHexagons();
 
+        // Wallet Connection Hook
+        function useWallet() {
+            const [wallet, setWallet] = useState(null);
+            const [connected, setConnected] = useState(false);
+            const [connecting, setConnecting] = useState(false);
+
+            const connect = async () => {
+                setConnecting(true);
+                try {
+                    // Check for Phantom wallet
+                    if (window.solana && window.solana.isPhantom) {
+                        const response = await window.solana.connect();
+                        setWallet(response.publicKey.toString());
+                        setConnected(true);
+                        console.log('Connected:', response.publicKey.toString());
+                    } else {
+                        // Open Phantom website if not installed
+                        window.open('https://phantom.app/', '_blank');
+                        alert('Please install Phantom wallet and refresh the page');
+                    }
+                } catch (err) {
+                    console.error('Connection error:', err);
+                    alert('Failed to connect wallet: ' + err.message);
+                } finally {
+                    setConnecting(false);
+                }
+            };
+
+            const disconnect = async () => {
+                if (window.solana) {
+                    await window.solana.disconnect();
+                }
+                setWallet(null);
+                setConnected(false);
+            };
+
+            // Auto-check if already connected
+            useEffect(() => {
+                const checkConnection = async () => {
+                    if (window.solana && window.solana.isPhantom) {
+                        try {
+                            const response = await window.solana.connect({ onlyIfTrusted: true });
+                            if (response) {
+                                setWallet(response.publicKey.toString());
+                                setConnected(true);
+                            }
+                        } catch (e) {
+                            // Not connected, that's fine
+                        }
+                    }
+                };
+                checkConnection();
+            }, []);
+
+            return { wallet, connected, connecting, connect, disconnect };
+        }
+
         function WorldMap({ lands, onSelect }) {
             useEffect(() => {
-                const map = L.map('map', { center: [25, 10], zoom: 2, minZoom: 2, worldCopyJump: true });
+                const map = L.map('map', { center: [20, 0], zoom: 2, minZoom: 2, worldCopyJump: true });
                 
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19
                 }).addTo(map);
 
                 lands.forEach(land => {
+                    // FLIPPED COLORS: Epic = gold/yellow (cities), Common = gray (remote)
                     const color = land.owned ? '#00ff88' : 
-                                 land.rarity === 'epic' ? '#9945ff' : 
-                                 land.rarity === 'rare' ? '#00d4ff' : '#666';
+                                 land.rarity === 'epic' ? '#ffd700' :  // Gold for cities
+                                 land.rarity === 'rare' ? '#00d4ff' :   // Cyan for medium
+                                 '#666';                                   // Gray for remote
                     
                     const icon = L.divIcon({
                         className: 'custom-hex',
-                        html: `<div class="hex-marker" style="background: ${color}; box-shadow: 0 0 6px ${color}"></div>`,
-                        iconSize: [14, 14], iconAnchor: [7, 7]
+                        html: `<div class="hex-marker" style="background: ${color}; box-shadow: 0 0 10px ${color}"></div>`,
+                        iconSize: [12, 12], iconAnchor: [6, 6]
                     });
 
                     L.marker([land.lat, land.lng], { icon })
                         .addTo(map)
-                        .bindTooltip(`${land.name}<br>$${land.price} · ${land.rarity}${land.owned ? ' · OWNED' : ''}`, {direction: 'top'})
+                        .bindTooltip(`<b>${land.name}</b><br>Pop: ${land.population}<br>$${land.price} · ${land.rarity}${land.owned ? ' · OWNED' : ''}`, {direction: 'top'})
                         .on('click', () => onSelect(land));
                 });
 
@@ -245,10 +375,12 @@
         function App() {
             const [selectedLand, setSelectedLand] = useState(null);
             const [lands, setLands] = useState(LAND_PARCELS);
+            const { wallet, connected, connecting, connect, disconnect } = useWallet();
 
             const owned = lands.filter(l => l.owned);
-            const totalValue = owned.reduce((sum, l) => sum + l.price, 0);
-            const dailyRent = owned.reduce((sum, l) => sum + parseFloat(l.dailyRent), 0).toFixed(4);
+            const myLand = lands.filter(l => l.owned); // Will be filtered by wallet later
+            const myValue = myLand.reduce((sum, l) => sum + l.price, 0);
+            const myDaily = myLand.reduce((sum, l) => sum + parseFloat(l.dailyRent), 0);
 
             const handleBuy = (land) => {
                 setLands(lands.map(l => l.id === land.id ? {...l, owned: true} : l));
@@ -259,41 +391,45 @@
                 <div className="app">
                     <header className="header">
                         <div className="logo">PolyWorld</div>
-                        <div style={{display: 'flex', gap: '2rem'}}>
-                            <span>Land Hex: <strong style={{color: '#00d4ff'}}>{lands.length}</strong></span>
+                        <div style={{display: 'flex', gap: '2rem', alignItems: 'center'}}>
+                            <span>Total: <strong style={{color: '#00d4ff'}}>{lands.length}</strong></span>
                             <span>Owned: <strong style={{color: '#00ff88'}}>{owned.length}</strong></span>
-                            <span>Value: <strong style={{color: '#00d4ff'}}>${totalValue.toLocaleString()}</strong></span>
-                            <span>Daily: <strong style={{color: '#00ff88'}}>${dailyRent}</strong></span>
+                            {connected && (
+                                <span style={{fontSize: '0.85rem', color: '#888'}}>
+                                    {wallet.slice(0, 6)}...{wallet.slice(-4)}
+                                </span>
+                            )}
+                            <button 
+                                className={`wallet-btn ${connected ? 'connected' : ''}`}
+                                onClick={connected ? disconnect : connect}
+                                disabled={connecting}
+                            >
+                                {connecting ? 'Connecting...' : connected ? 'Disconnect' : 'Connect Phantom'}
+                            </button>
                         </div>
-                        <button className="wallet-btn">Connect Wallet</button>
                     </header>
 
                     <div className="main">
                         <WorldMap lands={lands} onSelect={setSelectedLand} />
                         <aside className="sidebar">
                             <h3 style={{color: '#888', marginBottom: '0.5rem', fontSize: '0.9rem', textTransform: 'uppercase'}}>
-                                Land Coverage ({lands.length} hexagons)
+                                Available Land ({lands.length})
                             </h3>
-                            <div style={{fontSize: '0.8rem', color: '#00ff88', marginBottom: '1rem', padding: '0.5rem', background: 'rgba(0,255,136,0.1)', borderRadius: '6px'}}>
-                                ✅ All hexagons are on LAND only
+                            <div style={{fontSize: '0.8rem', color: '#ffd700', marginBottom: '1rem', padding: '0.5rem', background: 'rgba(255,215,0,0.1)', borderRadius: '6px'}}>
+                                ⭐ Cities = EPIC (high value) | 🏔️ Remote = COMMON
                             </div>
                             <div style={{maxHeight: 'calc(100vh - 200px)', overflowY: 'auto'}}>
-                                {lands.slice(0, 100).map(land => (
+                                {lands.map(land => (
                                     <div key={land.id} className={`land-item ${land.rarity}`} onClick={() => setSelectedLand(land)}>
                                         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                                             <span style={{fontWeight: 600}}>{land.name}</span>
-                                            <span style={{color: land.rarity === 'epic' ? '#9945ff' : land.rarity === 'rare' ? '#00d4ff' : '#888', fontSize: '0.7rem', textTransform: 'uppercase'}}>{land.rarity}</span>
+                                            <span style={{color: land.rarity === 'epic' ? '#ffd700' : land.rarity === 'rare' ? '#00d4ff' : '#888', fontSize: '0.7rem', textTransform: 'uppercase'}}>{land.rarity}</span>
                                         </div>
                                         <div style={{fontSize: '0.85rem', color: '#888', marginTop: '0.25rem'}}>
-                                            ${land.price} USDC · <span style={{color: '#00ff88'}}>+${land.dailyRent}/day</span>
+                                            Pop: {land.population} · ${land.price} · <span style={{color: '#00ff88'}}>+${land.dailyRent}/day</span>
                                         </div>
                                     </div>
                                 ))}
-                                {lands.length > 100 && (
-                                    <div style={{textAlign: 'center', color: '#666', padding: '1rem', fontSize: '0.85rem'}}>
-                                        ... and {lands.length - 100} more land hexagons
-                                    </div>
-                                )}
                             </div>
                         </aside>
                     </div>
@@ -301,22 +437,22 @@
                     {selectedLand && (
                         <div className="modal-overlay" onClick={() => setSelectedLand(null)}>
                             <div className="modal" onClick={e => e.stopPropagation()}>
-                                <h2 style={{color: '#00d4ff', marginBottom: '1.5rem'}}>{selectedLand.name}</h2>
-                                <div style={{marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between'}}>
-                                    <span style={{color: '#888'}}>Location</span>
-                                    <span>{selectedLand.lat.toFixed(2)}°, {selectedLand.lng.toFixed(2)}°</span>
+                                <h2 style={{color: selectedLand.rarity === 'epic' ? '#ffd700' : '#00d4ff', marginBottom: '1rem'}}>{selectedLand.name}</h2>
+                                <div style={{marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between'}}>
+                                    <span style={{color: '#888'}}>Population</span>
+                                    <span style={{textTransform: 'capitalize', color: selectedLand.population === 'high' ? '#ffd700' : selectedLand.population === 'medium' ? '#00d4ff' : '#888'}}>{selectedLand.population}</span>
                                 </div>
-                                <div style={{marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between'}}>
+                                <div style={{marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between'}}>
                                     <span style={{color: '#888'}}>Rarity</span>
-                                    <span style={{color: selectedLand.rarity === 'epic' ? '#9945ff' : selectedLand.rarity === 'rare' ? '#00d4ff' : '#888', textTransform: 'capitalize'}}>{selectedLand.rarity}</span>
+                                    <span style={{color: selectedLand.rarity === 'epic' ? '#ffd700' : selectedLand.rarity === 'rare' ? '#00d4ff' : '#888', textTransform: 'capitalize'}}>{selectedLand.rarity}</span>
                                 </div>
-                                <div style={{marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between'}}>
+                                <div style={{marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between'}}>
                                     <span style={{color: '#888'}}>Price</span>
                                     <span>${selectedLand.price} USDC</span>
                                 </div>
-                                <div style={{marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between'}}>
-                                    <span style={{color: '#888'}}>Annual Yield</span>
-                                    <span style={{color: '#00ff88'}}>{selectedLand.yield}%</span>
+                                <div style={{marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between'}}>
+                                    <span style={{color: '#888'}}>Yield</span>
+                                    <span style={{color: '#00ff88'}}>{selectedLand.yield}% APY</span>
                                 </div>
                                 <div style={{marginBottom: '1rem', display: 'flex', justifyContent: 'space-between'}}>
                                     <span style={{color: '#888'}}>Daily Rent</span>
@@ -326,6 +462,11 @@
                                     <button className="buy-btn" onClick={() => {handleBuy(selectedLand); setSelectedLand(null);}}>
                                         Buy for ${selectedLand.price} USDC
                                     </button>
+                                )}
+                                {selectedLand.owned && (
+                                    <div style={{textAlign: 'center', color: '#00ff88', padding: '1rem', background: 'rgba(0,255,136,0.1)', borderRadius: '8px'}}>
+                                        ✓ You own this land
+                                    </div>
                                 )}
                             </div>
                         </div>
