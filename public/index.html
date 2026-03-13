@@ -7,10 +7,11 @@
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- MapLibre GL JS (free Mapbox alternative with globe) -->
+    <script src="https://unpkg.com/maplibre-gl@3.6.0/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@3.6.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <!-- H3 Hexagon library -->
+    <script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
     <style>
         * {
             margin: 0;
@@ -55,6 +56,23 @@
             -webkit-text-fill-color: transparent;
         }
 
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stat-value {
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
         .wallet-btn {
             background: linear-gradient(135deg, #00d4ff, #0099cc);
             border: none;
@@ -73,16 +91,21 @@
         .main {
             flex: 1;
             display: flex;
-            overflow: hidden;
+            position: relative;
+        }
+
+        #map {
+            flex: 1;
+            background: #0a0a0f;
         }
 
         .sidebar {
-            width: 350px;
-            background: #14141e;
-            border-right: 1px solid #2a2a3e;
+            width: 380px;
+            background: rgba(20, 20, 30, 0.95);
+            border-left: 1px solid #2a2a3e;
             padding: 1.5rem;
             overflow-y: auto;
-            z-index: 100;
+            backdrop-filter: blur(10px);
         }
 
         .sidebar-title {
@@ -91,33 +114,14 @@
             letter-spacing: 2px;
             color: #888;
             margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: #1a1a2e;
-            padding: 1rem;
-            border-radius: 12px;
-            border: 1px solid #2a2a3e;
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            color: #888;
-            text-transform: uppercase;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
+        .land-count {
             color: #00d4ff;
+            font-weight: bold;
         }
 
         .land-list {
@@ -127,35 +131,54 @@
         }
 
         .land-item {
-            background: #1a1a2e;
+            background: linear-gradient(135deg, #1a1a2e 0%, #1e1e35 100%);
             padding: 1rem;
             border-radius: 12px;
             border: 1px solid #2a2a3e;
             cursor: pointer;
             transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
         }
 
         .land-item:hover {
             border-color: #00d4ff;
-            background: #1e1e35;
+            transform: translateX(5px);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
         }
+
+        .land-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #00d4ff;
+        }
+
+        .land-item.epic::before { background: #9945ff; }
+        .land-item.rare::before { background: #00d4ff; }
+        .land-item.common::before { background: #888; }
 
         .land-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.5rem;
         }
 
         .land-name {
             font-weight: 600;
+            font-size: 0.95rem;
         }
 
         .land-rarity {
-            padding: 0.25rem 0.5rem;
+            padding: 0.2rem 0.5rem;
             border-radius: 4px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             text-transform: uppercase;
+            font-weight: bold;
         }
 
         .land-rarity.common { background: #3a3a4e; color: #888; }
@@ -163,42 +186,37 @@
         .land-rarity.epic { background: #4a1a6e; color: #9945ff; }
 
         .land-details {
+            display: flex;
+            justify-content: space-between;
             font-size: 0.85rem;
             color: #888;
         }
 
         .land-yield {
             color: #00ff88;
+            font-weight: 600;
         }
 
-        #map {
-            flex: 1;
-            background: #0a0a0f;
+        .hex-info {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
         }
 
-        /* Custom map styling */
-        .leaflet-container {
-            background: #0a0a0f;
+        .hex-info-title {
+            color: #00d4ff;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
         }
 
-        .land-marker {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            border: 2px solid #fff;
-            cursor: pointer;
-            transition: all 0.3s;
+        .hex-info-text {
+            font-size: 0.85rem;
+            color: #aaa;
+            line-height: 1.5;
         }
-
-        .land-marker:hover {
-            transform: scale(1.3);
-            box-shadow: 0 0 15px currentColor;
-        }
-
-        .land-marker.common { background: #888; }
-        .land-marker.rare { background: #00d4ff; }
-        .land-marker.epic { background: #9945ff; }
-        .land-marker.owned { background: #00ff88; }
 
         .modal-overlay {
             position: fixed;
@@ -206,26 +224,27 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 2000;
+            backdrop-filter: blur(5px);
         }
 
         .modal {
-            background: #1a1a2e;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             border-radius: 16px;
             border: 1px solid #00d4ff;
             padding: 2rem;
-            max-width: 400px;
+            max-width: 420px;
             width: 90%;
             position: relative;
-            box-shadow: 0 0 40px rgba(0, 212, 255, 0.3);
+            box-shadow: 0 0 60px rgba(0, 212, 255, 0.4);
         }
 
         .modal-title {
-            font-size: 1.5rem;
+            font-size: 1.75rem;
             margin-bottom: 1.5rem;
             background: linear-gradient(90deg, #00d4ff, #9945ff);
             -webkit-background-clip: text;
@@ -259,10 +278,13 @@
             cursor: pointer;
             margin-top: 1.5rem;
             transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .buy-btn:hover {
-            box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+            box-shadow: 0 0 40px rgba(0, 212, 255, 0.6);
+            transform: translateY(-2px);
         }
 
         .close-btn {
@@ -274,6 +296,30 @@
             color: #888;
             font-size: 1.5rem;
             cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close-btn:hover {
+            color: #fff;
+        }
+
+        .globe-hint {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #888;
+            border: 1px solid #2a2a3e;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .globe-hint strong {
+            color: #00d4ff;
         }
     </style>
 </head>
@@ -283,38 +329,62 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        const MOCK_LAND = [
-            { id: 1, name: "NYC Financial District", lat: 40.7074, lng: -74.0113, rarity: "common", price: 100, yield: 2.0, owned: true, dailyRent: 0.0055 },
-            { id: 2, name: "Antarctica Research Station", lat: -77.8458, lng: 166.6860, rarity: "epic", price: 500, yield: 4.0, owned: false, dailyRent: 0.055 },
-            { id: 3, name: "Tokyo Shibuya", lat: 35.6595, lng: 139.7004, rarity: "common", price: 120, yield: 2.0, owned: false, dailyRent: 0.0066 },
-            { id: 4, name: "Sahara Desert Oasis", lat: 23.4162, lng: 25.6628, rarity: "rare", price: 250, yield: 3.0, owned: false, dailyRent: 0.0205 },
-            { id: 5, name: "Amazon Rainforest", lat: -3.4653, lng: -62.2159, rarity: "rare", price: 180, yield: 3.0, owned: false, dailyRent: 0.0148 },
-            { id: 6, name: "Sydney Opera House", lat: -33.8568, lng: 151.2153, rarity: "common", price: 150, yield: 2.0, owned: false, dailyRent: 0.0082 },
-            { id: 7, name: "Mount Everest Base", lat: 28.0014, lng: 86.9282, rarity: "epic", price: 600, yield: 4.0, owned: false, dailyRent: 0.0658 },
-            { id: 8, name: "London Big Ben", lat: 51.5007, lng: -0.1246, rarity: "common", price: 130, yield: 2.0, owned: false, dailyRent: 0.0071 },
-        ];
+        // Hexagon size: Resolution 5 = ~100km across (good balance)
+        const H3_RESOLUTION = 5;
+
+        // Generate sample hexagons on land
+        const SAMPLE_HEXAGONS = [
+            // North America
+            { hex: '8529a3bffffffff', lat: 40.7, lng: -74.0, name: 'NYC Region', rarity: 'common', price: 100, yield: 2.0, owned: true },
+            { hex: '8545a537ffffffff', lat: 34.0, lng: -118.2, name: 'Los Angeles', rarity: 'common', price: 120, yield: 2.0, owned: false },
+            { hex: '856f2b47ffffffff', lat: 25.7, lng: -80.2, name: 'Miami Coast', rarity: 'rare', price: 200, yield: 3.0, owned: false },
+            
+            // South America
+            { hex: '8585062bffffffff', lat: -23.5, lng: -46.6, name: 'São Paulo', rarity: 'common', price: 90, yield: 2.0, owned: false },
+            { hex: '85831237ffffffff', lat: -34.6, lng: -58.3, name: 'Buenos Aires', rarity: 'rare', price: 180, yield: 3.0, owned: false },
+            
+            // Europe
+            { hex: '85a1849bffffffff', lat: 51.5, lng: -0.1, name: 'London Area', rarity: 'common', price: 130, yield: 2.0, owned: false },
+            { hex: '85a05947ffffffff', lat: 48.8, lng: 2.3, name: 'Paris Region', rarity: 'common', price: 140, yield: 2.0, owned: false },
+            { hex: '85a42417ffffffff', lat: 41.9, lng: 12.5, name: 'Rome Area', rarity: 'epic', price: 300, yield: 4.0, owned: false },
+            
+            // Africa
+            { hex: '85b4e76bffffffff', lat: -1.2, lng: 36.8, name: 'Nairobi', rarity: 'epic', price: 350, yield: 4.0, owned: false },
+            { hex: '85b5ce6bffffffff', lat: -33.9, lng: 18.4, name: 'Cape Town', rarity: 'rare', price: 220, yield: 3.0, owned: false },
+            
+            // Asia
+            { hex: '85c3075bffffffff', lat: 35.6, lng: 139.7, name: 'Tokyo Bay', rarity: 'common', price: 150, yield: 2.0, owned: false },
+            { hex: '85c1e9c3ffffffff', lat: 39.9, lng: 116.4, name: 'Beijing Area', rarity: 'common', price: 110, yield: 2.0, owned: false },
+            { hex: '85c2d4a7ffffffff', lat: 28.6, lng: 77.2, name: 'New Delhi', rarity: 'epic', price: 400, yield: 4.0, owned: false },
+            { hex: '85c3441bffffffff', lat: 1.3, lng: 103.8, name: 'Singapore', rarity: 'epic', price: 500, yield: 4.0, owned: false },
+            
+            // Australia
+            { hex: '85d4d4a3ffffffff', lat: -33.8, lng: 151.2, name: 'Sydney Harbor', rarity: 'rare', price: 250, yield: 3.0, owned: false },
+            { hex: '85d4a7cbffffffff', lat: -37.8, lng: 144.9, name: 'Melbourne', rarity: 'common', price: 140, yield: 2.0, owned: false },
+            
+            // Remote/Premium
+            { hex: '857b59c3ffffffff', lat: 64.1, lng: -21.9, name: 'Iceland', rarity: 'epic', price: 600, yield: 4.0, owned: false },
+            { hex: '85f4d4afffffffff', lat: -77.8, lng: 166.6, name: 'Antarctica', rarity: 'epic', price: 800, yield: 4.0, owned: false },
+            { hex: '8526365bffffffff', lat: 21.3, lng: -157.8, name: 'Hawaii', rarity: 'epic', price: 450, yield: 4.0, owned: false },
+        ].map(h => ({
+            ...h,
+            dailyRent: (h.price * (h.yield / 100) / 365).toFixed(4)
+        }));
 
         function Stats({ totalLand, totalValue, dailyRent }) {
             return (
-                <div>
-                    <div className="sidebar-title">Your Portfolio</div>
-                    <div className="stats-grid">
-                        <div className="stat-card">
-                            <div className="stat-label">Land Owned</div>
-                            <div className="stat-value">{totalLand}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="stat-label">Total Value</div>
-                            <div className="stat-value">${totalValue}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="stat-label">Daily Rent</div>
-                            <div className="stat-value" style={{color: '#00ff88'}}>${dailyRent}</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="stat-label">APY</div>
-                            <div className="stat-value">2.8%</div>
-                        </div>
+                <div style={{display: 'flex', gap: '2rem'}}>
+                    <div className="stat">
+                        <span>Land:</span>
+                        <span className="stat-value">{totalLand}</span>
+                    </div>
+                    <div className="stat">
+                        <span>Value:</span>
+                        <span className="stat-value">${totalValue.toLocaleString()}</span>
+                    </div>
+                    <div className="stat">
+                        <span>Daily:</span>
+                        <span className="stat-value" style={{color: '#00ff88'}}>${dailyRent}</span>
                     </div>
                 </div>
             );
@@ -324,22 +394,34 @@
             const owned = lands.filter(l => l.owned);
             return (
                 <div>
-                    <div className="sidebar-title">Your Land</div>
+                    <div className="sidebar-title">
+                        <span>Your Hexagons</span>
+                        <span className="land-count">{owned.length}</span>
+                    </div>
+                    
+                    <div className="hex-info">
+                        <div className="hex-info-title">Hexagon Size</div>
+                        <div className="hex-info-text">
+                            Each hexagon covers ~100km across. The entire planet's land area is divided into these hex parcels. Remote locations are rarer and pay higher yield.
+                        </div>
+                    </div>
+
                     <div className="land-list">
                         {owned.map(land => (
-                            <div key={land.id} className="land-item" onClick={() => onSelect(land)}>
+                            <div key={land.hex} className={`land-item ${land.rarity}`} onClick={() => onSelect(land)}>
                                 <div className="land-header">
                                     <span className="land-name">{land.name}</span>
                                     <span className={`land-rarity ${land.rarity}`}>{land.rarity}</span>
                                 </div>
                                 <div className="land-details">
-                                    ${land.price} · <span className="land-yield">+${land.dailyRent}/day</span>
+                                    <span>${land.price} USDC</span>
+                                    <span className="land-yield">+${land.dailyRent}/day</span>
                                 </div>
                             </div>
                         ))}
                         {owned.length === 0 && (
                             <div style={{color: '#888', textAlign: 'center', padding: '2rem'}}>
-                                Click land on map to buy!
+                                Click a hexagon on the globe to buy your first land parcel!
                             </div>
                         )}
                     </div>
@@ -347,53 +429,101 @@
             );
         }
 
-        function WorldMap({ lands, onSelect }) {
-            const mapRef = useRef(null);
-            const markersRef = useRef([]);
+        function GlobeMap({ lands, onSelect }) {
+            const mapContainer = useRef(null);
+            const map = useRef(null);
 
             useEffect(() => {
-                // Initialize Leaflet map
-                const map = L.map('map', {
-                    center: [20, 0],
-                    zoom: 2,
-                    minZoom: 2,
-                    worldCopyJump: true
+                // Initialize MapLibre with globe projection
+                map.current = new maplibregl.Map({
+                    container: mapContainer.current,
+                    style: {
+                        version: 8,
+                        sources: {
+                            'osm': {
+                                type: 'raster',
+                                tiles: ['https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'],
+                                tileSize: 256,
+                                attribution: '&copy; OpenStreetMap &copy; CARTO'
+                            }
+                        },
+                        layers: [{
+                            id: 'osm',
+                            type: 'raster',
+                            source: 'osm',
+                            paint: {
+                                'raster-opacity': 0.6
+                            }
+                        }]
+                    },
+                    center: [0, 20],
+                    zoom: 1.5,
+                    projection: 'globe'  // This enables the 3D globe!
                 });
 
-                // Add dark theme tile layer (CartoDB Dark Matter)
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; OpenStreetMap &copy; CARTO',
-                    subdomains: 'abcd',
-                    maxZoom: 19
-                }).addTo(map);
-
-                // Add markers for each land parcel
-                lands.forEach(land => {
-                    const colorClass = land.owned ? 'owned' : land.rarity;
-                    
-                    const icon = L.divIcon({
-                        className: 'custom-div-icon',
-                        html: `<div class="land-marker ${colorClass}"></div>`,
-                        iconSize: [20, 20],
-                        iconAnchor: [10, 10]
+                // Add atmosphere and stars
+                map.current.on('load', () => {
+                    map.current.setFog({
+                        'color': '#0a0a1f',
+                        'high-color': '#1a1a3e',
+                        'space-color': '#000000',
+                        'horizon-blend': 0.1,
+                        'star-intensity': 0.8
                     });
 
-                    const marker = L.marker([land.lat, land.lng], { icon })
-                        .addTo(map)
-                        .bindPopup(`<b>${land.name}</b><br>$${land.price} - ${land.rarity}`);
+                    // Add hexagon markers
+                    lands.forEach(land => {
+                        const color = land.owned ? '#00ff88' : 
+                                     land.rarity === 'epic' ? '#9945ff' : 
+                                     land.rarity === 'rare' ? '#00d4ff' : '#888';
+                        
+                        // Create hexagon-shaped marker
+                        const el = document.createElement('div');
+                        el.className = 'hex-marker';
+                        el.style.cssText = `
+                            width: 24px;
+                            height: 24px;
+                            background: ${color};
+                            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+                            border: 2px solid #fff;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                            box-shadow: 0 0 10px ${color}80;
+                        `;
+                        el.onmouseenter = () => {
+                            el.style.transform = 'scale(1.3)';
+                            el.style.boxShadow = `0 0 20px ${color}`;
+                        };
+                        el.onmouseleave = () => {
+                            el.style.transform = 'scale(1)';
+                            el.style.boxShadow = `0 0 10px ${color}80`;
+                        };
 
-                    marker.on('click', () => onSelect(land));
-                    markersRef.current.push(marker);
+                        const marker = new maplibregl.Marker({ element: el })
+                            .setLngLat([land.lng, land.lat])
+                            .setPopup(new maplibregl.Popup().setHTML(`
+                                <div style="color: #000; padding: 8px;">
+                                    <b>${land.name}</b><br/>
+                                    ${land.rarity.toUpperCase()} · $${land.price}
+                                </div>
+                            `))
+                            .addTo(map.current);
+
+                        el.addEventListener('click', () => onSelect(land));
+                    });
                 });
 
-                mapRef.current = map;
-
-                return () => {
-                    map.remove();
-                };
+                return () => map.current?.remove();
             }, [lands, onSelect]);
 
-            return <div id="map"></div>;
+            return (
+                <div style={{flex: 1, position: 'relative'}}>
+                    <div ref={mapContainer} id="map" style={{width: '100%', height: '100%'}} />
+                    <div className="globe-hint">
+                        <strong>Scroll</strong> to zoom · <strong>Drag</strong> to rotate · Click <strong>hexagons</strong> to buy
+                    </div>
+                </div>
+            );
         }
 
         function BuyModal({ land, onClose, onBuy }) {
@@ -402,27 +532,46 @@
                 <div className="modal-overlay" onClick={onClose}>
                     <div className="modal" onClick={e => e.stopPropagation()}>
                         <button className="close-btn" onClick={onClose}>×</button>
-                        <h2 className="modal-title">{land.owned ? 'Your Land' : 'Buy Land'}</h2>
+                        <h2 className="modal-title">{land.owned ? 'Your Hexagon' : 'Buy Hexagon'}</h2>
+                        
                         <div className="modal-row">
                             <span className="modal-label">Location</span>
                             <span className="modal-value">{land.name}</span>
                         </div>
+                        
+                        <div className="modal-row">
+                            <span className="modal-label">Hex ID</span>
+                            <span className="modal-value" style={{fontSize: '0.8rem', color: '#666'}}>{land.hex}</span>
+                        </div>
+                        
                         <div className="modal-row">
                             <span className="modal-label">Rarity</span>
-                            <span className="modal-value" style={{textTransform: 'capitalize'}}>{land.rarity}</span>
+                            <span className="modal-value" style={{textTransform: 'capitalize', color: 
+                                land.rarity === 'epic' ? '#9945ff' : 
+                                land.rarity === 'rare' ? '#00d4ff' : '#888'
+                            }}>{land.rarity}</span>
                         </div>
+                        
+                        <div className="modal-row">
+                            <span className="modal-label">Size</span>
+                            <span className="modal-value">~100 km across</span>
+                        </div>
+                        
                         <div className="modal-row">
                             <span className="modal-label">Price</span>
                             <span className="modal-value">${land.price} USDC</span>
                         </div>
+                        
                         <div className="modal-row">
                             <span className="modal-label">Annual Yield</span>
                             <span className="modal-value" style={{color: '#00ff88'}}>{land.yield}%</span>
                         </div>
+                        
                         <div className="modal-row">
                             <span className="modal-label">Daily Rent</span>
                             <span className="modal-value" style={{color: '#00ff88'}}>${land.dailyRent}/day</span>
                         </div>
+
                         {!land.owned && (
                             <button className="buy-btn" onClick={() => {onBuy(land); onClose();}}>
                                 Buy for ${land.price} USDC
@@ -435,34 +584,33 @@
 
         function App() {
             const [selectedLand, setSelectedLand] = useState(null);
-            const [lands, setLands] = useState(MOCK_LAND);
+            const [lands, setLands] = useState(SAMPLE_HEXAGONS);
             const [walletConnected, setWalletConnected] = useState(false);
 
             const owned = lands.filter(l => l.owned);
             const totalValue = owned.reduce((sum, l) => sum + l.price, 0);
-            const dailyRent = owned.reduce((sum, l) => sum + l.dailyRent, 0);
+            const dailyRent = owned.reduce((sum, l) => sum + parseFloat(l.dailyRent), 0).toFixed(4);
 
             const handleBuy = (land) => {
-                setLands(lands.map(l => l.id === land.id ? {...l, owned: true} : l));
-                alert(`Bought ${land.name} for $${land.price} USDC!`);
+                setLands(lands.map(l => l.hex === land.hex ? {...l, owned: true} : l));
+                alert(`Bought ${land.name} hexagon!`);
             };
 
             return (
                 <div className="app">
                     <header className="header">
                         <div className="logo">PolyWorld</div>
+                        <Stats totalLand={owned.length} totalValue={totalValue} dailyRent={dailyRent} />
                         <button className="wallet-btn" onClick={() => setWalletConnected(!walletConnected)}>
                             {walletConnected ? '0x1234...5678' : 'Connect Wallet'}
                         </button>
                     </header>
 
                     <div className="main">
+                        <GlobeMap lands={lands} onSelect={setSelectedLand} />
                         <aside className="sidebar">
-                            <Stats totalLand={owned.length} totalValue={totalValue} dailyRent={dailyRent.toFixed(4)} />
                             <LandList lands={lands} onSelect={setSelectedLand} />
                         </aside>
-
-                        <WorldMap lands={lands} onSelect={setSelectedLand} />
                     </div>
 
                     {selectedLand && (
