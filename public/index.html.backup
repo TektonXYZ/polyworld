@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PolyWorld - 1000 Cities</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0f; color: #fff; overflow: hidden; }
+        #root { width: 100vw; height: 100vh; }
+        .app { display: flex; flex-direction: column; height: 100vh; }
+        .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #00d4ff; z-index: 1000; }
+        .logo { font-size: 1.5rem; font-weight: bold; background: linear-gradient(90deg, #00d4ff, #9945ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .main { flex: 1; display: flex; overflow: hidden; }
+        #map { flex: 1; background: #0a0a0f; }
+        .sidebar { width: 400px; background: rgba(20, 20, 30, 0.98); border-left: 1px solid #2a2a3e; padding: 1rem; overflow-y: auto; z-index: 100; }
+        .land-item { background: linear-gradient(135deg, #1a1a2e 0%, #1e1e35 100%); padding: 0.6rem; border-radius: 8px; border: 1px solid #2a2a3e; margin-bottom: 0.4rem; cursor: pointer; font-size: 0.85rem; }
+        .land-item:hover { border-color: #00d4ff; }
+        .land-item.epic { border-left: 3px solid #ffd700; }
+        .land-item.rare { border-left: 3px solid #00d4ff; }
+        .land-item.common { border-left: 3px solid #888; }
+        .wallet-btn { background: linear-gradient(135deg, #00d4ff, #0099cc); border: none; padding: 0.6rem 1.2rem; border-radius: 6px; color: #000; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
+        .wallet-btn.connected { background: linear-gradient(135deg, #00ff88, #00cc6a); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+        .modal { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; border: 1px solid #00d4ff; padding: 1.5rem; max-width: 380px; width: 90%; }
+        .buy-btn { width: 100%; background: linear-gradient(135deg, #00d4ff, #0099cc); border: none; padding: 0.8rem; border-radius: 6px; color: #000; font-weight: bold; cursor: pointer; margin-top: 0.8rem; }
+        .hex-marker { width: 10px; height: 10px; background: currentColor; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); border: 1px solid rgba(255,255,255,0.3); cursor: pointer; }
+        .hex-marker:hover { transform: scale(2); }
+        .stats-bar { display: flex; gap: 1.5rem; font-size: 0.9rem; }
+        .continent-filter { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .filter-btn { background: #2a2a3e; border: 1px solid #3a3a4e; color: #fff; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+        .filter-btn:hover, .filter-btn.active { background: #00d4ff; color: #000; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // 1000 REAL CITIES worldwide
+        const generateThousandCities = () => {
+            const cities = [];
+            
+            // Helper to add city
+            const add = (name, lat, lng, pop = 'medium', country = '', continent = '') => {
+                cities.push({ name, lat, lng, pop, country, continent });
+            };
+            
+            // NORTH AMERICA (250 cities)
+            // USA - Major cities
+            add("New York", 40.71, -74.00, "high", "USA", "North America");
+            add("Los Angeles", 34.05, -118.24, "high", "USA", "North America");
+            add("Chicago", 41.87, -87.62, "high", "USA", "North America");
+            add("Houston", 29.76, -95.36, "high", "USA", "North America");
+            add("Phoenix", 33.44, -112.07, "high", "USA", "North America");
+            add("Philadelphia", 39.95, -75.16, "high", "USA", "North America");
+            add("San Antonio", 29.42, -98.49, "high", "USA", "North America");
+            add("San Diego", 32.71, -117.16, "high", "USA", "North America");
+            add("Dallas", 32.77, -96.79, "high", "USA", "North America");
+            add("San Jose", 37.33, -121.88, "high", "USA", "North America");
+            add("Austin", 30.26, -97.74, "high", "USA", "North America");
+            add("Jacksonville", 30.33, -81.65, "high", "USA", "North America");
+            add("Fort Worth", 32.75, -97.33, "high", "USA", "North America");
+            add("Columbus", 39.96, -82.99, "high", "USA", "North America");
+            add("Charlotte", 35.22, -80.84, "high", "USA", "North America");
+            add("Indianapolis", 39.76, -86.15, "high", "USA", "North America");
+            add("San Francisco", 37.77, -122.41, "high", "USA", "North America");
+            add("Seattle", 47.60, -122.33, "high", "USA", "North America");
+            add("Denver", 39.73, -104.99, "high", "USA", "North America");
+            add("Washington DC", 38.90, -77.03, "high", "USA", "North America");
+            add("Boston", 42.36, -71.05, "high", "USA", "North America");
+            add("El Paso", 31.76, -106.48, "high", "USA", "North America");
+            add("Nashville", 36.16, -86.78, "high", "USA", "North America");
+            add("Detroit", 42.33, -83.04, "high", "USA", "North America");
+            add("Oklahoma City", 35.46, -97.51, "high", "USA", "North America");
+            add("Portland", 45.51, -122.67, "high", "USA", "North America");
+            add("Las Vegas", 36.16, -115.13, "high", "USA", "North America");
+            add("Memphis", 35.14, -90.05, "high", "USA", "North America");
+            add("Louisville", 38.25, -85.76, "high", "USA", "North America");
+            add("Baltimore", 39.28, -76.61, "high", "USA", "North America");
+            add("Milwaukee", 43.03, -87.90, "high", "USA", "North America");
+            add("Albuquerque", 35.08, -106.65, "high", "USA", "North America");
+            add("Tucson", 32.22, -110.97, "high", "USA", "North America");
+            add("Fresno", 36.73, -119.78, "high", "USA", "North America");
+            add("Mesa", 33.41, -111.83, "high", "USA", "North America");
+            add("Sacramento", 38.58, -121.49, "high", "USA", "North America");
+            add("Atlanta", 33.74, -84.38, "high", "USA", "North America");
+            add("Kansas City", 39.09, -94.57, "high", "USA", "North America");
+            add("Colorado Springs", 38.83, -104.82, "high", "USA", "North America");
+            add("Omaha", 41.25, -95.93, "high", "USA", "North America");
+            add("Raleigh", 35.77, -78.63, "high", "USA", "North America");
+            add("Miami", 25.76, -80.19, "high", "USA", "North America");
+            add("Long Beach", 33.77, -118.19, "high", "USA", "North America");
+            add("Virginia Beach", 36.85, -75.97, "high", "USA", "North America");
+            add("Oakland", 37.80, -122.27, "high", "USA", "North America");
+            add("Minneapolis", 44.97, -93.26, "high", "USA", "North America");
+            add("Tulsa", 36.15, -95.99, "high", "USA", "North America");
+            add("Tampa", 27.95, -82.45, "high", "USA", "North America");
+            add("Arlington", 32.73, -97.10, "high", "USA", "North America");
+            add("New Orleans", 29.95, -90.07, "high", "USA", "North America");
+            add("Wichita", 37.68, -97.33, "high", "USA", "North America");
+            add("Cleveland", 41.49, -81.69, "high", "USA", "North America");
+            add("Bakersfield", 35.37, -119.01, "high", "USA", "North America");
+            add("Aurora", 39.72, -104.83, "high", "USA", "North America");
+            add("Anaheim", 33.83, -117.91, "high", "USA", "North America");
+            add("Honolulu", 21.30, -157.85, "high", "USA", "North America");
+            add("Santa Ana", 33.74, -117.86, "high", "USA", "North America");
+            add("Riverside", 33.95, -117.39, "high", "USA", "North America");
+            add("Corpus Christi", 27.80, -97.39, "high", "USA", "North America");
+            add("Lexington", 38.04, -84.50, "high", "USA", "North America");
+            add("Stockton", 37.95, -121.29, "high", "USA", "North America");
+            add("Henderson", 36.03, -115.03, "high", "USA", "North America");
+            add("Saint Paul", 44.95, -93.09, "high", "USA", "North America");
+            add("St Louis", 38.62, -90.19, "high", "USA", "North America");
+            add("Cincinnati", 39.10, -84.51, "high", "USA", "North America");
+            add("Pittsburgh", 40.44, -79.99, "high", "USA", "North America");
+            add("Greensboro", 36.07, -79.79, "high", "USA", "North America");
+            add("Anchorage", 61.21, -149.90, "high", "USA", "North America");
+            add("Plano", 33.01, -96.69, "high", "USA", "North America");
+            add("Lincoln", 40.81, -96.70, "high", "USA", "North America");
+            add("Orlando", 28.53, -81.37, "high", "USA", "North America");
+            add("Irvine", 33.68, -117.82, "high", "USA", "North America");
+            add("Newark", 40.73, -74.17, "high", "USA", "North America");
+            add("Durham", 35.99, -78.89, "high", "USA", "North America");
+            add("Chula Vista", 32.64, -117.08, "high", "USA", "North America");
+            add("Toledo", 41.65, -83.53, "high", "USA", "North America");
+            add("Fort Wayne", 41.07, -85.13, "high", "USA", "North America");
+            add("St Petersburg", 27.76, -82.64, "high", "USA", "North America");
+            add("Laredo", 27.53, -99.46, "high", "USA", "North America");
+            add("Jersey City", 40.72, -74.07, "high", "USA", "North America");
+            add("Chandler", 33.30, -111.84, "high", "USA", "North America");
+            add("Madison", 43.07, -89.40, "high", "USA", "North America");
+            add("Lubbock", 33.57, -101.85, "high", "USA", "North America");
+            add("Scottsdale", 33.49, -111.92, "high", "USA", "North America");
+            add("Reno", 39.52, -119.81, "high", "USA", "North America");
+            add("Buffalo", 42.88, -78.87, "high", "USA", "North America");
+            add("Gilbert", 33.35, -111.78, "high", "USA", "North America");
+            add("Glendale", 33.53, -112.18, "high", "USA", "North America");
+            add("North Las Vegas", 36.19, -115.11, "high", "USA", "North America");
+            add("Winston-Salem", 36.09, -80.24, "high", "USA", "North America");
+            add("Chesapeake", 36.77, -76.28, "high", "USA", "North America");
+            add("Norfolk", 36.85, -76.28, "high", "USA", "North America");
+            add("Fremont", 37.54, -121.98, "high", "USA", "North America");
+            add("Garland", 32.91, -96.63, "high", "USA", "North America");
+            add("Irving", 32.81, -96.94, "high", "USA", "North America");
+            add("Hialeah", 25.85, -80.27, "high", "USA", "North America");
+            add("Richmond", 37.54, -77.43, "high", "USA", "North America");
+            add("Boise", 43.61, -116.20, "high", "USA", "North America");
+            add("Spokane", 47.65, -117.42, "high", "USA", "North America");
+            add("Baton Rouge", 30.45, -91.18, "high", "USA", "North America");
+            add("Des Moines", 41.58, -93.62, "high", "USA", "North America");
+            add("Tacoma", 47.25, -122.44, "high", "USA", "North America");
+            add("San Bernardino", 34.10, -117.28, "high", "USA", "North America");
+            add("Modesto", 37.63, -120.99, "high", "USA", "North America");
+            add("Fontana", 34.09, -117.43, "high", "USA", "North America");
+            add("Santa Clarita", 34.39, -118.54, "high", "USA", "North America");
+            add("Birmingham", 33.52, -86.80, "high", "USA", "North America");
+            add("Oxnard", 34.19, -119.17, "high", "USA", "North America");
+            add("Fayetteville", 36.06, -94.16, "high", "USA", "North America");
+            add("Moreno Valley", 33.93, -117.22, "high", "USA", "North America");
+            add("Rochester", 43.15, -77.60, "high", "USA", "North America");
+            add("Glendale", 34.14, -118.25, "high", "USA", "North America");
+            add("Huntington Beach", 33.65, -117.99, "high", "USA", "North America");
+            add("Salt Lake City", 40.76, -111.89, "high", "USA", "North America");
+            add("Grand Rapids", 42.96, -85.66, "high", "USA", "North America");
+            add("Amarillo", 35.22, -101.83, "high", "USA", "North America");
+            add("Yonkers", 40.93, -73.89, "high", "USA", "North America");
+            add("Aurora", 41.76, -88.32, "high", "USA", "North America");
+            add("Montgomery", 32.37, -86.30, "high", "USA", "North America");
+            add("Akron", 41.08, -81.51, "high", "USA", "North America");
+            add("Little Rock", 34.74, -92.28, "high", "USA", "North America");
+            add("Huntsville", 34.73, -86.58, "high", "USA", "North America");
+            add("Augusta", 33.47, -81.97, "high", "USA", "North America");
+            add("Port St Lucie", 27.27, -80.35, "high", "USA", "North America");
+            add("Grand Prairie", 32.74, -97.00, "high", "USA", "North America");
+            add("Columbus", 32.46, -84.98, "high", "USA", "North America");
+            add("Tallahassee", 30.43, -84.28, "high", "USA", "North America");
+            add("Overland Park", 38.98, -94.67, "high", "USA", "North America");
+            add("Brownsville", 25.90, -97.49, "high", "USA", "North America");
+            add("Providence", 41.82, -71.41, "high", "USA", "North America");
+            add("Knoxville", 35.96, -83.92, "high", "USA", "North America");
+            add("Shreveport", 32.52, -93.75, "high", "USA", "North America");
+            add("Salem", 44.94, -123.03, "high", "USA", "North America");
+            add("Mobile", 30.69, -88.04, "high", "USA", "North America");
+            add("Ontario", 34.06, -117.65, "high", "USA", "North America");
+            
+            // USA Medium cities
+            add("Eugene", 44.05, -123.09, "medium", "USA", "North America");
+            add("Metairie", 29.98, -90.15, "medium", "USA", "North America");
+            add("Sioux Falls", 43.54, -96.73, "medium", "USA", "North America");
+            add("Peoria", 33.58, -112.23, "medium", "USA", "North America");
+            add("Vancouver", 45.63, -122.67, "medium", "USA", "North America");
+            add("Chattanooga", 35.04, -85.30, "medium", "USA", "North America");
+            add("Fort Lauderdale", 26.12, -80.13, "medium", "USA", "North America");
+            add("Springfield", 39.78, -89.64, "medium", "USA", "North America");
+            add("Jackson", 32.29, -90.18, "medium", "USA", "North America");
+            add("Cape Coral", 26.56, -81.94, "medium", "USA", "North America");
+            add("Garden Grove", 33.77, -117.94, "medium", "USA", "North America");
+            add("Oceanside", 33.19, -117.37, "medium", "USA", "North America");
+            add("Pembroke Pines", 26.00, -80.22, "medium", "USA", "North America");
+            add("Rancho Cucamonga", 34.10, -117.59, "medium", "USA", "North America");
+            add("Santa Rosa", 38.44, -122.71, "medium", "USA", "North America");
+            add("Rockford", 42.27, -89.09, "medium", "USA", "North America");
+            add("Springfield", 37.20, -93.29, "medium", "USA", "North America");
+            add("Portsmouth", 36.83, -76.30, "medium", "USA", "North America");
+            add("Syracuse", 43.04, -76.14, "medium", "USA", "North America");
+            add("Dayton", 39.75, -84.19, "medium", "USA", "North America");
+            add("McKinney", 33.19, -96.61, "medium", "USA", "North America");
+            add("Worcester", 42.26, -71.80, "medium", "USA", "North America");
+            add("Hollywood", 26.01, -80.14, "medium", "USA", "North America");
+            add("Clarksville", 36.52, -87.35, "medium", "USA", "North America");
+            add("Killeen", 31.11, -97.72, "medium", "USA", "North America");
+            add("College Station", 30.62, -96.33, "medium", "USA", "North America");
+            add("Lafayette", 30.22, -92.01, "medium", "USA", "North America");
+            add("Athens", 33.95, -83.35, "medium", "USA", "North America");
+            add("Topeka", 39.05, -95.68, "medium", "USA", "North America");
+            add("Norman", 35.22, -97.44, "medium", "USA", "North America");
+            add("Abilene", 32.44, -99.73, "medium", "USA", "North America");
+            add("Wilmington", 34.22, -77.94, "medium", "USA", "North America");
+            add("Ann Arbor", 42.28, -83.74, "medium", "USA", "North America");
+            add("Denton", 33.21, -97.13, "medium", "USA", "North America");
+            add("Berkeley", 37.87, -122.27, "medium", "USA", "North America");
+            add("Provo", 40.23, -111.65, "medium", "USA", "North America");
+            add("Elgin", 42.03, -88.28, "medium", "USA", "North America");
+            add("Lansing", 42.73, -84.55, "medium", "USA", "North America");
+            add("Murfreesboro", 35.84, -86.39, "medium", "USA", "North America");
+            add("Beaumont", 30.08, -94.10, "medium", "USA", "North America");
+            add("Independence", 39.09, -94.41, "medium", "USA", "North America");
+            add("Round Rock", 30.50, -97.67, "medium", "USA", "North America");
+            add("Stamford", 41.05, -73.53, "medium", "USA", "North America");
+            add("Carrollton", 32.97, -96.88, "medium", "USA", "North America");
+            add("Midland", 31.99, -102.07, "medium", "USA", "North America");
+            add("Odessa", 31.84, -102.36, "medium", "USA", "North America");
+            add("Miramar", 25.97, -80.23, "medium", "USA", "North America");
+            
+            // CANADA (50 cities)
+            add("Toronto", 43.65, -79.38, "high", "Canada", "North America");
+            add("Montreal", 45.50, -73.56, "high", "Canada", "North America");
+            add("Vancouver", 49.28, -123.12, "high", "Canada", "North America");
+            add("Calgary", 51.04, -114.07, "high", "Canada", "North America");
+            add("Edmonton", 53.54, -113.49, "high", "Canada", "North America");
+            add("Ottawa", 45.42, -75.69, "high", "Canada", "North America");
+            add("Winnipeg", 49.89, -97.13, "high", "Canada", "North America");
+            add("Quebec City", 46.81, -71.20, "high", "Canada", "North America");
+            add("Hamilton", 43.25, -79.87, "high", "Canada", "North America");
+            add("Kitchener", 43.45, -80.49, "high", "Canada", "North America");
+            add("London", 42.98, -81.24, "high", "Canada", "North America");
+            add("Victoria", 48.42, -123.36, "high", "Canada", "North America");
+            add("Halifax", 44.64, -63.57, "high", "Canada", "North America");
+            add("Oshawa", 43.89, -78.86, "high", "Canada", "North America");
+            add("Windsor", 42.31, -83.03, "high", "Canada", "North America");
+            add("Saskatoon", 52.13, -106.67, "high", "Canada", "North America");
+            add("Regina", 50.44, -104.61, "high", "Canada", "North America");
+            add("Sherbrooke", 45.40, -71.88, "high", "Canada", "North America");
+            add("St Johns", 47.56, -52.71, "high", "Canada", "North America");
+            add("Barrie", 44.38, -79.69, "high", "Canada", "North America");
+            add("Kelowna", 49.88, -119.49, "medium", "Canada", "North America");
+            add("Abbotsford", 49.05, -122.31, "medium", "Canada", "North America");
+            add("Greater Sudbury", 46.49, -80.99, "medium", "Canada", "North America");
+            add("Kingston", 44.23, -76.48, "medium", "Canada", "North America");
+            add("Saguenay", 48.42, -71.06, "medium", "Canada", "North America");
+            add("Trois-Rivieres", 46.34, -72.54, "medium", "Canada", "North America");
+            add("Guelph", 43.54, -80.24, "medium", "Canada", "North America");
+            add("Thunder Bay", 48.38, -89.24, "medium", "Canada", "North America");
+            add("Sydney", 46.13, -60.19, "low", "Canada", "North America");
+            add("Whitehorse", 60.72, -135.05, "low", "Canada", "North America");
+            add("Yellowknife", 62.45, -114.37, "low", "Canada", "North America");
+            add("Iqaluit", 63.74, -68.51, "low", "Canada", "North America");
+            
+            // MEXICO (30 cities)
+            add("Mexico City", 19.43, -99.13, "high", "Mexico", "North America");
+            add("Guadalajara", 20.65, -103.34, "high", "Mexico", "North America");
+            add("Monterrey", 25.68, -100.31, "high", "Mexico", "North America");
+            add("Puebla", 19.04, -98.19, "high", "Mexico", "North America");
+            add("Tijuana", 32.51, -117.03, "high", "Mexico", "North America");
+            add("Leon", 21.12, -101.68, "high", "Mexico", "North America");
+            add("Juarez", 31.69, -106.42, "high", "Mexico", "North America");
+            add("Cancun", 21.16, -86.85, "high", "Mexico", "North America");
+            add("Merida", 20.96, -89.61, "high", "Mexico", "North America");
+            add("San Luis Potosi", 22.15, -100.97, "high", "Mexico", "North America");
+            add("Queretaro", 20.58, -100.39, "high", "Mexico", "North America");
+            add("Hermosillo", 29.07, -110.95, "high", "Mexico", "North America");
+            add("Mexicali", 32.62, -115.45, "high", "Mexico", "North America");
+            add("Aguascalientes", 21.88, -102.29, "high", "Mexico", "North America");
+            add("Morelia", 19.70, -101.18, "high", "Mexico", "North America");
+            add("Chihuahua", 28.63, -106.07, "high", "Mexico", "North America");
+            add("Saltillo", 25.42, -101.00, "high", "Mexico", "North America");
+            add("Culiacan", 24.80, -107.38, "high", "
