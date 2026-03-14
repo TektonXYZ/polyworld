@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PolyWorld - 900 Cities</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <title>PolyWorld - 200+ Capital Cities</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0f; color: #fff; overflow: hidden; }
@@ -18,9 +18,9 @@
         .logo { font-size: 1.5rem; font-weight: bold; background: linear-gradient(90deg, #00d4ff, #9945ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .main { flex: 1; display: flex; overflow: hidden; }
         #map { flex: 1; background: #0a0a0f; }
-        .sidebar { width: 400px; background: rgba(20, 20, 30, 0.98); border-left: 1px solid #2a2a3e; padding: 1rem; overflow-y: auto; z-index: 100; }
-        .land-item { background: linear-gradient(135deg, #1a1a2e 0%, #1e1e35 100%); padding: 0.6rem; border-radius: 8px; border: 1px solid #2a2a3e; margin-bottom: 0.4rem; cursor: pointer; font-size: 0.85rem; }
-        .land-item:hover { border-color: #00d4ff; }
+        .sidebar { width: 350px; background: rgba(20, 20, 30, 0.98); border-left: 1px solid #2a2a3e; padding: 1rem; overflow-y: auto; z-index: 100; }
+        .land-item { background: linear-gradient(135deg, #1a1a2e 0%, #1e1e35 100%); padding: 0.6rem; border-radius: 8px; border: 1px solid #2a2a3e; margin-bottom: 0.4rem; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; }
+        .land-item:hover { border-color: #00d4ff; transform: translateX(5px); }
         .land-item.epic { border-left: 3px solid #ffd700; }
         .land-item.rare { border-left: 3px solid #00d4ff; }
         .land-item.common { border-left: 3px solid #888; }
@@ -29,22 +29,173 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; }
         .modal { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; border: 1px solid #00d4ff; padding: 1.5rem; max-width: 380px; width: 90%; }
         .buy-btn { width: 100%; background: linear-gradient(135deg, #00d4ff, #0099cc); border: none; padding: 0.8rem; border-radius: 6px; color: #000; font-weight: bold; cursor: pointer; margin-top: 0.8rem; }
-        .hex-marker { width: 10px; height: 10px; background: currentColor; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); border: 1px solid rgba(255,255,255,0.3); cursor: pointer; }
-        .hex-marker:hover { transform: scale(2); }
+        .buy-btn:disabled { background: #555; cursor: not-allowed; }
         .stats-bar { display: flex; gap: 1.5rem; font-size: 0.9rem; }
-        .continent-filter { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
-        .filter-btn { background: #2a2a3e; border: 1px solid #3a3a4e; color: #fff; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+        .continent-filter { display: flex; gap: 0.4rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .filter-btn { background: #2a2a3e; border: 1px solid #3a3a4e; color: #fff; padding: 0.35rem 0.7rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
         .filter-btn:hover, .filter-btn.active { background: #00d4ff; color: #000; }
         .city-count { color: #00d4ff; font-weight: bold; }
     </style>
 </head>
 <body>
     <div id="root"></div>
-    <script src="cities-data.js"></script>
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // Prices and yields based on population
+        const WORLD_CITIES = [
+            {name:"Kabul",lat:34.52,lng:69.17,pop:"high",country:"Afghanistan",continent:"Asia"},
+            {name:"Tirana",lat:41.32,lng:19.81,pop:"high",country:"Albania",continent:"Europe"},
+            {name:"Algiers",lat:36.75,lng:3.05,pop:"high",country:"Algeria",continent:"Africa"},
+            {name:"Luanda",lat:-8.83,lng:13.23,pop:"high",country:"Angola",continent:"Africa"},
+            {name:"Buenos Aires",lat:-34.60,lng:-58.38,pop:"high",country:"Argentina",continent:"South America"},
+            {name:"Yerevan",lat:40.17,lng:44.50,pop:"high",country:"Armenia",continent:"Asia"},
+            {name:"Canberra",lat:-35.28,lng:149.13,pop:"high",country:"Australia",continent:"Oceania"},
+            {name:"Vienna",lat:48.20,lng:16.37,pop:"high",country:"Austria",continent:"Europe"},
+            {name:"Baku",lat:40.40,lng:49.86,pop:"high",country:"Azerbaijan",continent:"Asia"},
+            {name:"Nassau",lat:25.03,lng:-77.39,pop:"high",country:"Bahamas",continent:"North America"},
+            {name:"Manama",lat:26.22,lng:50.58,pop:"high",country:"Bahrain",continent:"Asia"},
+            {name:"Dhaka",lat:23.81,lng:90.41,pop:"high",country:"Bangladesh",continent:"Asia"},
+            {name:"Minsk",lat:53.90,lng:27.56,pop:"high",country:"Belarus",continent:"Europe"},
+            {name:"Brussels",lat:50.85,lng:4.35,pop:"high",country:"Belgium",continent:"Europe"},
+            {name:"Porto-Novo",lat:6.49,lng:2.62,pop:"medium",country:"Benin",continent:"Africa"},
+            {name:"Thimphu",lat:27.47,lng:89.63,pop:"medium",country:"Bhutan",continent:"Asia"},
+            {name:"Sucre",lat:-19.03,lng:-65.25,pop:"medium",country:"Bolivia",continent:"South America"},
+            {name:"Sarajevo",lat:43.85,lng:18.41,pop:"high",country:"Bosnia",continent:"Europe"},
+            {name:"Gaborone",lat:-24.62,lng:25.92,pop:"medium",country:"Botswana",continent:"Africa"},
+            {name:"Brasilia",lat:-15.79,lng:-47.88,pop:"high",country:"Brazil",continent:"South America"},
+            {name:"Sofia",lat:42.69,lng:23.32,pop:"high",country:"Bulgaria",continent:"Europe"},
+            {name:"Ouagadougou",lat:12.37,lng:-1.51,pop:"high",country:"Burkina Faso",continent:"Africa"},
+            {name:"Phnom Penh",lat:11.55,lng:104.92,pop:"high",country:"Cambodia",continent:"Asia"},
+            {name:"Yaounde",lat:3.84,lng:11.50,pop:"high",country:"Cameroon",continent:"Africa"},
+            {name:"Ottawa",lat:45.42,lng:-75.69,pop:"high",country:"Canada",continent:"North America"},
+            {name:"Santiago",lat:-33.44,lng:-70.66,pop:"high",country:"Chile",continent:"South America"},
+            {name:"Beijing",lat:39.90,lng:116.40,pop:"high",country:"China",continent:"Asia"},
+            {name:"Bogota",lat:4.71,lng:-74.07,pop:"high",country:"Colombia",continent:"South America"},
+            {name:"Kinshasa",lat:-4.32,lng:15.31,pop:"high",country:"DR Congo",continent:"Africa"},
+            {name:"San Jose CR",lat:9.92,lng:-84.09,pop:"high",country:"Costa Rica",continent:"North America"},
+            {name:"Zagreb",lat:45.81,lng:15.98,pop:"high",country:"Croatia",continent:"Europe"},
+            {name:"Havana",lat:23.11,lng:-82.36,pop:"high",country:"Cuba",continent:"North America"},
+            {name:"Prague",lat:50.07,lng:14.43,pop:"high",country:"Czechia",continent:"Europe"},
+            {name:"Copenhagen",lat:55.67,lng:12.56,pop:"high",country:"Denmark",continent:"Europe"},
+            {name:"Djibouti",lat:11.57,lng:43.15,pop:"medium",country:"Djibouti",continent:"Africa"},
+            {name:"Santo Domingo",lat:18.48,lng:-69.93,pop:"high",country:"Dominican Republic",continent:"North America"},
+            {name:"Quito",lat:-0.18,lng:-78.46,pop:"high",country:"Ecuador",continent:"South America"},
+            {name:"Cairo",lat:30.04,lng:31.23,pop:"high",country:"Egypt",continent:"Africa"},
+            {name:"San Salvador",lat:13.69,lng:-89.21,pop:"high",country:"El Salvador",continent:"North America"},
+            {name:"Asmara",lat:15.32,lng:38.92,pop:"medium",country:"Eritrea",continent:"Africa"},
+            {name:"Tallinn",lat:59.43,lng:24.75,pop:"high",country:"Estonia",continent:"Europe"},
+            {name:"Addis Ababa",lat:9.00,lng:38.75,pop:"high",country:"Ethiopia",continent:"Africa"},
+            {name:"Helsinki",lat:60.16,lng:24.93,pop:"high",country:"Finland",continent:"Europe"},
+            {name:"Paris",lat:48.85,lng:2.35,pop:"high",country:"France",continent:"Europe"},
+            {name:"Libreville",lat:0.41,lng:9.45,pop:"medium",country:"Gabon",continent:"Africa"},
+            {name:"Banjul",lat:13.44,lng:-16.57,pop:"medium",country:"Gambia",continent:"Africa"},
+            {name:"Tbilisi",lat:41.71,lng:44.82,pop:"high",country:"Georgia",continent:"Asia"},
+            {name:"Berlin",lat:52.52,lng:13.40,pop:"high",country:"Germany",continent:"Europe"},
+            {name:"Accra",lat:5.60,lng:-0.18,pop:"high",country:"Ghana",continent:"Africa"},
+            {name:"Athens",lat:37.98,lng:23.72,pop:"high",country:"Greece",continent:"Europe"},
+            {name:"Guatemala City",lat:14.63,lng:-90.50,pop:"high",country:"Guatemala",continent:"North America"},
+            {name:"Conakry",lat:9.64,lng:-13.57,pop:"high",country:"Guinea",continent:"Africa"},
+            {name:"Georgetown",lat:6.80,lng:-58.15,pop:"medium",country:"Guyana",continent:"South America"},
+            {name:"Port-au-Prince",lat:18.59,lng:-72.30,pop:"high",country:"Haiti",continent:"North America"},
+            {name:"Tegucigalpa",lat:14.07,lng:-87.20,pop:"high",country:"Honduras",continent:"North America"},
+            {name:"Budapest",lat:47.49,lng:19.04,pop:"high",country:"Hungary",continent:"Europe"},
+            {name:"Reykjavik",lat:64.14,lng:-21.94,pop:"high",country:"Iceland",continent:"Europe"},
+            {name:"New Delhi",lat:28.61,lng:77.20,pop:"high",country:"India",continent:"Asia"},
+            {name:"Jakarta",lat:-6.20,lng:106.84,pop:"high",country:"Indonesia",continent:"Asia"},
+            {name:"Tehran",lat:35.68,lng:51.38,pop:"high",country:"Iran",continent:"Asia"},
+            {name:"Baghdad",lat:33.31,lng:44.36,pop:"high",country:"Iraq",continent:"Asia"},
+            {name:"Dublin",lat:53.34,lng:-6.26,pop:"high",country:"Ireland",continent:"Europe"},
+            {name:"Jerusalem",lat:31.76,lng:35.21,pop:"high",country:"Israel",continent:"Asia"},
+            {name:"Rome",lat:41.90,lng:12.49,pop:"high",country:"Italy",continent:"Europe"},
+            {name:"Kingston",lat:17.97,lng:-76.79,pop:"high",country:"Jamaica",continent:"North America"},
+            {name:"Tokyo",lat:35.67,lng:139.65,pop:"high",country:"Japan",continent:"Asia"},
+            {name:"Amman",lat:31.94,lng:35.92,pop:"high",country:"Jordan",continent:"Asia"},
+            {name:"Nur-Sultan",lat:51.16,lng:71.42,pop:"high",country:"Kazakhstan",continent:"Asia"},
+            {name:"Nairobi",lat:-1.29,lng:36.82,pop:"high",country:"Kenya",continent:"Africa"},
+            {name:"Pyongyang",lat:39.03,lng:125.76,pop:"high",country:"North Korea",continent:"Asia"},
+            {name:"Seoul",lat:37.56,lng:126.97,pop:"high",country:"South Korea",continent:"Asia"},
+            {name:"Kuwait City",lat:29.37,lng:47.97,pop:"high",country:"Kuwait",continent:"Asia"},
+            {name:"Bishkek",lat:42.87,lng:74.59,pop:"high",country:"Kyrgyzstan",continent:"Asia"},
+            {name:"Vientiane",lat:17.97,lng:102.60,pop:"high",country:"Laos",continent:"Asia"},
+            {name:"Riga",lat:56.94,lng:24.10,pop:"high",country:"Latvia",continent:"Europe"},
+            {name:"Beirut",lat:33.89,lng:35.50,pop:"high",country:"Lebanon",continent:"Asia"},
+            {name:"Monrovia",lat:6.31,lng:-10.80,pop:"high",country:"Liberia",continent:"Africa"},
+            {name:"Tripoli",lat:32.88,lng:13.19,pop:"high",country:"Libya",continent:"Africa"},
+            {name:"Vilnius",lat:54.68,lng:25.27,pop:"high",country:"Lithuania",continent:"Europe"},
+            {name:"Luxembourg",lat:49.61,lng:6.13,pop:"high",country:"Luxembourg",continent:"Europe"},
+            {name:"Antananarivo",lat:-18.87,lng:47.50,pop:"high",country:"Madagascar",continent:"Africa"},
+            {name:"Lilongwe",lat:-13.96,lng:33.77,pop:"medium",country:"Malawi",continent:"Africa"},
+            {name:"Kuala Lumpur",lat:3.13,lng:101.68,pop:"high",country:"Malaysia",continent:"Asia"},
+            {name:"Bamako",lat:12.63,lng:-8.00,pop:"high",country:"Mali",continent:"Africa"},
+            {name:"Valletta",lat:35.89,lng:14.51,pop:"medium",country:"Malta",continent:"Europe"},
+            {name:"Nouakchott",lat:18.07,lng:-15.99,pop:"high",country:"Mauritania",continent:"Africa"},
+            {name:"Mexico City",lat:19.43,lng:-99.13,pop:"high",country:"Mexico",continent:"North America"},
+            {name:"Chisinau",lat:47.01,lng:28.86,pop:"high",country:"Moldova",continent:"Europe"},
+            {name:"Ulaanbaatar",lat:47.91,lng:106.88,pop:"high",country:"Mongolia",continent:"Asia"},
+            {name:"Podgorica",lat:42.43,lng:19.25,pop:"medium",country:"Montenegro",continent:"Europe"},
+            {name:"Rabat",lat:34.02,lng:-6.84,pop:"high",country:"Morocco",continent:"Africa"},
+            {name:"Maputo",lat:-25.96,lng:32.57,pop:"high",country:"Mozambique",continent:"Africa"},
+            {name:"Naypyidaw",lat:19.76,lng:96.07,pop:"high",country:"Myanmar",continent:"Asia"},
+            {name:"Windhoek",lat:-22.56,lng:17.08,pop:"medium",country:"Namibia",continent:"Africa"},
+            {name:"Kathmandu",lat:27.71,lng:85.32,pop:"high",country:"Nepal",continent:"Asia"},
+            {name:"Amsterdam",lat:52.37,lng:4.89,pop:"high",country:"Netherlands",continent:"Europe"},
+            {name:"Wellington",lat:-41.28,lng:174.77,pop:"high",country:"New Zealand",continent:"Oceania"},
+            {name:"Managua",lat:12.11,lng:-86.24,pop:"high",country:"Nicaragua",continent:"North America"},
+            {name:"Niamey",lat:13.51,lng:2.11,pop:"high",country:"Niger",continent:"Africa"},
+            {name:"Abuja",lat:9.08,lng:7.39,pop:"high",country:"Nigeria",continent:"Africa"},
+            {name:"Skopje",lat:41.99,lng:21.43,pop:"high",country:"North Macedonia",continent:"Europe"},
+            {name:"Oslo",lat:59.91,lng:10.75,pop:"high",country:"Norway",continent:"Europe"},
+            {name:"Muscat",lat:23.58,lng:58.40,pop:"high",country:"Oman",continent:"Asia"},
+            {name:"Islamabad",lat:33.68,lng:73.04,pop:"high",country:"Pakistan",continent:"Asia"},
+            {name:"Panama City",lat:8.98,lng:-79.51,pop:"high",country:"Panama",continent:"North America"},
+            {name:"Port Moresby",lat:-9.47,lng:147.18,pop:"high",country:"Papua New Guinea",continent:"Oceania"},
+            {name:"Asuncion",lat:-25.26,lng:-57.57,pop:"high",country:"Paraguay",continent:"South America"},
+            {name:"Lima",lat:-12.04,lng:-77.04,pop:"high",country:"Peru",continent:"South America"},
+            {name:"Manila",lat:14.59,lng:120.98,pop:"high",country:"Philippines",continent:"Asia"},
+            {name:"Warsaw",lat:52.22,lng:21.01,pop:"high",country:"Poland",continent:"Europe"},
+            {name:"Lisbon",lat:38.72,lng:-9.13,pop:"high",country:"Portugal",continent:"Europe"},
+            {name:"Doha",lat:25.28,lng:51.53,pop:"high",country:"Qatar",continent:"Asia"},
+            {name:"Bucharest",lat:44.42,lng:26.10,pop:"high",country:"Romania",continent:"Europe"},
+            {name:"Moscow",lat:55.75,lng:37.61,pop:"high",country:"Russia",continent:"Europe"},
+            {name:"Kigali",lat:-1.94,lng:30.05,pop:"high",country:"Rwanda",continent:"Africa"},
+            {name:"Riyadh",lat:24.71,lng:46.67,pop:"high",country:"Saudi Arabia",continent:"Asia"},
+            {name:"Dakar",lat:14.71,lng:-17.46,pop:"high",country:"Senegal",continent:"Africa"},
+            {name:"Belgrade",lat:44.78,lng:20.44,pop:"high",country:"Serbia",continent:"Europe"},
+            {name:"Freetown",lat:8.46,lng:-13.26,pop:"high",country:"Sierra Leone",continent:"Africa"},
+            {name:"Singapore",lat:1.35,lng:103.81,pop:"high",country:"Singapore",continent:"Asia"},
+            {name:"Bratislava",lat:48.14,lng:17.10,pop:"high",country:"Slovakia",continent:"Europe"},
+            {name:"Ljubljana",lat:46.05,lng:14.50,pop:"high",country:"Slovenia",continent:"Europe"},
+            {name:"Mogadishu",lat:2.04,lng:45.34,pop:"high",country:"Somalia",continent:"Africa"},
+            {name:"Pretoria",lat:-25.74,lng:28.22,pop:"high",country:"South Africa",continent:"Africa"},
+            {name:"Juba",lat:4.85,lng:31.58,pop:"high",country:"South Sudan",continent:"Africa"},
+            {name:"Madrid",lat:40.41,lng:-3.70,pop:"high",country:"Spain",continent:"Europe"},
+            {name:"Colombo",lat:6.92,lng:79.86,pop:"high",country:"Sri Lanka",continent:"Asia"},
+            {name:"Khartoum",lat:15.50,lng:32.55,pop:"high",country:"Sudan",continent:"Africa"},
+            {name:"Stockholm",lat:59.32,lng:18.06,pop:"high",country:"Sweden",continent:"Europe"},
+            {name:"Bern",lat:46.94,lng:7.44,pop:"high",country:"Switzerland",continent:"Europe"},
+            {name:"Damascus",lat:33.51,lng:36.27,pop:"high",country:"Syria",continent:"Asia"},
+            {name:"Taipei",lat:25.03,lng:121.56,pop:"high",country:"Taiwan",continent:"Asia"},
+            {name:"Dushanbe",lat:38.55,lng:68.78,pop:"high",country:"Tajikistan",continent:"Asia"},
+            {name:"Bangkok",lat:13.75,lng:100.50,pop:"high",country:"Thailand",continent:"Asia"},
+            {name:"Lome",lat:6.12,lng:1.22,pop:"high",country:"Togo",continent:"Africa"},
+            {name:"Port of Spain",lat:10.65,lng:-61.51,pop:"high",country:"Trinidad",continent:"North America"},
+            {name:"Tunis",lat:36.80,lng:10.18,pop:"high",country:"Tunisia",continent:"Africa"},
+            {name:"Ankara",lat:39.93,lng:32.85,pop:"high",country:"Turkey",continent:"Asia"},
+            {name:"Ashgabat",lat:37.95,lng:58.38,pop:"high",country:"Turkmenistan",continent:"Asia"},
+            {name:"Kampala",lat:0.31,lng:32.58,pop:"high",country:"Uganda",continent:"Africa"},
+            {name:"Kyiv",lat:50.45,lng:30.52,pop:"high",country:"Ukraine",continent:"Europe"},
+            {name:"Abu Dhabi",lat:24.45,lng:54.37,pop:"high",country:"UAE",continent:"Asia"},
+            {name:"London",lat:51.50,lng:-0.12,pop:"high",country:"UK",continent:"Europe"},
+            {name:"Washington DC",lat:38.90,lng:-77.03,pop:"high",country:"USA",continent:"North America"},
+            {name:"Montevideo",lat:-34.90,lng:-56.16,pop:"high",country:"Uruguay",continent:"South America"},
+            {name:"Tashkent",lat:41.29,lng:69.24,pop:"high",country:"Uzbekistan",continent:"Asia"},
+            {name:"Caracas",lat:10.48,lng:-66.90,pop:"high",country:"Venezuela",continent:"South America"},
+            {name:"Hanoi",lat:21.02,lng:105.83,pop:"high",country:"Vietnam",continent:"Asia"},
+            {name:"Sanaa",lat:15.36,lng:44.19,pop:"high",country:"Yemen",continent:"Asia"},
+            {name:"Lusaka",lat:-15.41,lng:28.28,pop:"high",country:"Zambia",continent:"Africa"},
+            {name:"Harare",lat:-17.82,lng:31.05,pop:"high",country:"Zimbabwe",continent:"Africa"}
+        ];
+
         const TIERS = {
             high: { price: [500, 1000], apy: 4, color: '#ffd700', label: 'EPIC' },
             medium: { price: [200, 400], apy: 3, color: '#00d4ff', label: 'RARE' },
@@ -58,38 +209,29 @@
             const [selectedCity, setSelectedCity] = useState(null);
             const [ownedLands, setOwnedLands] = useState([]);
             const [filter, setFilter] = useState('All');
-            const [map, setMap] = useState(null);
 
             useEffect(() => {
-                const mapInstance = L.map('map').setView([20, 0], 2);
+                const map = L.map('map').setView([20, 0], 2);
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy;OpenStreetMap, &copy;CartoDB'
-                }).addTo(mapInstance);
-                setMap(mapInstance);
-
-                return () => mapInstance.remove();
-            }, []);
-
-            useEffect(() => {
-                if (!map) return;
+                }).addTo(map);
 
                 WORLD_CITIES.forEach(city => {
                     const tier = TIERS[city.pop];
                     const price = Math.floor(Math.random() * (tier.price[1] - tier.price[0]) + tier.price[0]);
                     
-                    const marker = L.circleMarker([city.lat, city.lng], {
+                    L.circleMarker([city.lat, city.lng], {
                         radius: 6,
                         fillColor: tier.color,
                         color: '#fff',
                         weight: 1,
                         opacity: 0.8,
                         fillOpacity: 0.8
-                    }).addTo(map);
-
-                    marker.bindPopup(`<b>${city.name}</b><br/>${city.country}<br/>${tier.label} - $${price}`);
-                    marker.on('click', () => setSelectedCity({...city, price}));
+                    }).addTo(map).bindPopup(`<b>${city.name}</b><br/>${city.country}`).on('click', () => setSelectedCity({...city, price}));
                 });
-            }, [map]);
+
+                return () => map.remove();
+            }, []);
 
             const connectWallet = async () => {
                 if (window.solana) {
@@ -97,17 +239,11 @@
                         const resp = await window.solana.connect();
                         setWallet(resp.publicKey.toString());
                     } catch (err) {
-                        console.error('Wallet connection failed:', err);
+                        console.error(err);
                     }
                 } else {
                     window.open('https://phantom.app/', '_blank');
                 }
-            };
-
-            const buyLand = () => {
-                if (!wallet || !selectedCity) return;
-                setOwnedLands([...ownedLands, selectedCity]);
-                setSelectedCity(null);
             };
 
             const filteredCities = useMemo(() => {
@@ -123,7 +259,7 @@
                             <span>Owned: {ownedLands.length}</span>
                         </div>
                         <button className={`wallet-btn ${wallet ? 'connected' : ''}`} onClick={connectWallet}>
-                            {wallet ? wallet.slice(0, 6) + '...' + wallet.slice(-4) : 'Connect Phantom'}
+                            {wallet ? wallet.slice(0, 6) + '...' : 'Connect Phantom'}
                         </button>
                     </header>
                     <div className="main">
@@ -143,7 +279,7 @@
                                     return (
                                         <div key={idx} className={`land-item ${city.pop}`} onClick={() => setSelectedCity({...city, price})}>
                                             <strong>{city.name}</strong> - {city.country}
-                                            <br/><small style={{color: tier.color}}>{tier.label} • ${price} • {tier.apy}% APY</small>
+                                            <br/><small style={{color: tier.color}}>{tier.label} • ${price}</small>
                                         </div>
                                     );
                                 })}
@@ -155,13 +291,10 @@
                             <div className="modal" onClick={e => e.stopPropagation()}>
                                 <h2>{selectedCity.name}</h2>
                                 <p>{selectedCity.country} • {selectedCity.continent}</p>
-                                <p style={{color: TIERS[selectedCity.pop].color, fontSize: '1.2rem', fontWeight: 'bold'}}>
-                                    {TIERS[selectedCity.pop].label}
-                                </p>
+                                <p style={{color: TIERS[selectedCity.pop].color}}>{TIERS[selectedCity.pop].label}</p>
                                 <p>Price: <strong>${selectedCity.price}</strong></p>
-                                <p>Daily Yield: <strong>${(selectedCity.price * TIERS[selectedCity.pop].apy / 365).toFixed(2)}</strong> ({TIERS[selectedCity.pop].apy}% APY)</p>
-                                <button className="buy-btn" onClick={buyLand} disabled={!wallet}>
-                                    {wallet ? 'Buy Land' : 'Connect Wallet to Buy'}
+                                <button className="buy-btn" onClick={() => {setOwnedLands([...ownedLands, selectedCity]); setSelectedCity(null);}} disabled={!wallet}>
+                                    {wallet ? 'Buy Land' : 'Connect Wallet'}
                                 </button>
                             </div>
                         </div>
