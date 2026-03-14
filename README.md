@@ -1,168 +1,212 @@
-# PolyWorld
+# ⚡ PolyWorld
 
-> A gamified real-yield virtual land platform on Solana
+> **Own the Earth. Earn Real Yield.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Solana](https://img.shields.io/badge/Solana-Devnet-9945ff?logo=solana)](https://solana.com)
-[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://reactjs.org)
-[![Anchor](https://img.shields.io/badge/Anchor-0.28-000000)](https://anchor-lang.com)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-tektonxyz.github.io/polyworld-00d4ff?style=for-the-badge&logo=github)](https://tektonxyz.github.io/polyworld/public/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
+[![Solana](https://img.shields.io/badge/Solana-Devnet-9945ff?style=for-the-badge&logo=solana)](https://solana.com)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)](https://reactjs.org)
+[![Cities](https://img.shields.io/badge/Cities-908%20Worldwide-ff6b6b?style=for-the-badge)](https://tektonxyz.github.io/polyworld/public/)
 
-## 🌍 Overview
+---
 
-PolyWorld is a virtual land game where players buy digital parcels of real-world Earth, stake USDC into a treasury, and earn passive yield as "rent" from that treasury's DeFi earnings.
+## 🎮 [Try It Live →](https://tektonxyz.github.io/polyworld/public/)
 
-**Key Innovation:** Every piece of land on Earth is tokenized as a buyable NFT. Remote locations (Antarctica, deserts, polar regions) are rarer and pay higher yields than cities.
+**908 real cities worldwide** • **Phantom Wallet** • **Zero gas on devnet**
 
-## ✨ Features
+---
 
-- 🗺️ **Real World Map** — Buy actual geographic locations
-- 🏗️ **Hexagon Grid** — Land divided into ~100km hex parcels
-- 💰 **Real Yield** — Treasury earns 4-5% APY from DeFi lending
-- 🎮 **Gamified** — Collect land, earn rent, build portfolio
-- 🔒 **Protocol-Only** — Guaranteed buyback, no speculation
-- ⚡ **Solana** — Fast, cheap transactions
+## 🌍 What is PolyWorld?
+
+PolyWorld is a **gamified virtual land investment platform** where players buy digital parcels of real-world Earth, stake USDC into a treasury, and earn passive yield as "rent" from DeFi earnings.
+
+### 🎯 Core Concept
+- **Buy real locations** — From New York to Antarctica
+- **Earn daily yield** — 2-4% APY based on land rarity  
+- **Protocol guarantees** — Buyback anytime with 5% fee
+- **Zero speculation** — Real DeFi yield, not PvP trading
+
+---
+
+## ✨ Key Features
+
+| Feature | Description |
+|---------|-------------|
+| 🗺️ **Real World Map** | Interactive Leaflet map with 908 real cities |
+| 🏗️ **Hexagon Grid** | Beautiful hex markers at real coordinates |
+| 💰 **Real Yield** | Treasury earns 4-5% APY from DeFi |
+| 🎮 **Rarity System** | Cities=Common, Remote=Epic (higher yield) |
+| 🔒 **Protocol Liquidity** | Guaranteed buyback, instant sells |
+| ⚡ **Solana Powered** | Fast transactions, negligible fees |
+| 🔗 **Phantom Wallet** | One-click connection |
+
+---
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### 1. Visit the Live Demo
+👉 **[tektonxyz.github.io/polyworld](https://tektonxyz.github.io/polyworld/public/)**
 
-- Node.js 18+
-- Solana CLI
-- Anchor Framework
-- PostgreSQL 14+
+### 2. Connect Wallet
+- Install [Phantom Wallet](https://phantom.app) (if you haven't)
+- Click "Connect Phantom" in the app
+- Approve the connection
 
-### Installation
+### 3. Start Exploring
+- Browse 908 cities on the interactive map
+- Filter by continent in the sidebar
+- Click any city to see price and yield
+- Buy land to start earning!
 
-```bash
-# Clone repository
-git clone https://github.com/TektonXYZ/polyworld.git
-cd polyworld
+---
 
-# Install frontend dependencies
-cd public && npm install
+## 🖼️ Screenshots
 
-# Install backend dependencies  
-cd ../backend && npm install
-
-# Set up database
-createdb polyworld
-psql -d polyworld -f database/schema.sql
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your settings
+```
+┌─────────────────────────────────────────┐
+│  ⚡ PolyWorld          [Connect Wallet] │
+│                                         │
+│     🗺️ Interactive Map                  │
+│     ┌─────────────────────────┐         │
+│     │  • • •  🏙️  • • •      │         │
+│     │    •  🌲  •  🏔️  •     │  ┌────┐ │
+│     │  •  🏙️  •  •  •  🌊   │  │List│ │
+│     │    •  •  🏜️  •  •     │  │of  │ │
+│     │  🏙️  •  •  •  🏙️  •   │  │Cities│ │
+│     └─────────────────────────┘  └────┘ │
+│                                         │
+└─────────────────────────────────────────┘
 ```
 
-### Running Locally
-
-```bash
-# Terminal 1: Start backend
-cd backend
-npm run dev
-
-# Terminal 2: Serve frontend
-cd public
-npx serve .
-
-# Open http://localhost:3000
-```
-
-### Connect Wallet
-
-1. Install [Phantom Wallet](https://phantom.app)
-2. Switch to Devnet
-3. Get devnet SOL from [faucet](https://faucet.solana.com)
-4. Connect wallet on PolyWorld
-5. Start buying land!
+---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Frontend   │────▶│   Backend   │────▶│  Database   │
-│  (React)    │     │  (Express)  │     │ (PostgreSQL)│
-└─────────────┘     └─────────────┘     └─────────────┘
-       │
-       ▼
-┌─────────────┐
-│   Solana    │
-│   Devnet    │
-│  (Anchor)   │
-└─────────────┘
+┌─────────────────────────────────────────────────┐
+│                   Frontend                      │
+│  ┌─────────┐  ┌─────────┐  ┌─────────────┐     │
+│  │  React  │  │ Leaflet │  │ Solana Web3 │     │
+│  │   18    │  │  Maps   │  │    .js      │     │
+│  └────┬────┘  └────┬────┘  └──────┬──────┘     │
+│       └─────────────┴──────────────┘            │
+└──────────────────────┬──────────────────────────┘
+                       │
+       ┌───────────────┼───────────────┐
+       ▼               ▼               ▼
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│   Backend   │  │   Solana    │  │   Postgre   │
+│   Express   │  │   Devnet    │  │    SQL      │
+│     API     │  │   Anchor    │  │  Database   │
+└─────────────┘  └─────────────┘  └─────────────┘
 ```
 
-### Smart Contracts
+---
 
-| Program | Purpose | Status |
-|---------|---------|--------|
-| `land_nft` | Land parcel NFTs | ✅ Built |
-| `treasury` | USDC management | ✅ Built |
+## 💻 Tech Stack
 
-### Tech Stack
+| Layer | Technologies |
+|-------|-------------|
+| **Frontend** | React 18, Leaflet Maps, Babel |
+| **Backend** | Node.js, Express, PostgreSQL |
+| **Blockchain** | Solana, Anchor Framework, Rust |
+| **Wallet** | Phantom, Solana Web3.js |
+| **Maps** | OpenStreetMap (CartoDB Dark) |
+| **Hosting** | GitHub Pages |
 
-- **Frontend:** React 18, Leaflet Maps, Solana Web3.js
-- **Backend:** Node.js, Express, PostgreSQL
-- **Blockchain:** Solana, Anchor Framework, Rust
-- **Maps:** OpenStreetMap (CartoDB Dark)
+---
 
-## 📊 Tokenomics
+## 📊 Game Mechanics
 
-| Component | Value |
-|-----------|-------|
-| Treasury Yield | ~5% APY |
-| Player Rent (Common) | ~2% |
-| Player Rent (Rare) | ~3% |
-| Player Rent (Epic) | ~4% |
-| Protocol Fee | 5% on sells |
+### Land Rarity & Yield
+
+| Type | Locations | Price | Daily Yield | APY |
+|------|-----------|-------|-------------|-----|
+| 🏙️ **EPIC** | Major Cities | $500-1000 | ~$0.55-1.10 | 4% |
+| 🌲 **RARE** | Medium Cities | $200-400 | ~$0.16-0.33 | 3% |
+| 🏔️ **COMMON** | Remote Areas | $50-150 | ~$0.03-0.08 | 2% |
+
+### Treasury Mechanics
+- Player deposits → Treasury
+- Treasury → DeFi lending protocols
+- Yield → Distributed as "rent" to land owners
+- Protocol takes 5% fee on sells
+
+---
 
 ## 🛣️ Roadmap
 
-### Phase 1: MVP ✅
+### ✅ Phase 1: MVP (Complete)
 - [x] Smart contract architecture
-- [x] Frontend with map
-- [x] Backend API
-- [x] Wallet integration
-- [x] Land purchase/sell
+- [x] Interactive world map (908 cities)
+- [x] Phantom wallet integration
+- [x] Land purchase/sell mechanics
+- [x] GitHub Pages deployment
 
-### Phase 2: Beta
-- [ ] Devnet deployment
-- [ ] USDC integration
-- [ ] Rent claiming
-- [ ] Mobile responsive
+### 🚧 Phase 2: Beta (In Progress)
+- [ ] Solana devnet deployment
+- [ ] USDC payment integration
+- [ ] Rent claiming system
+- [ ] Mobile responsiveness
 - [ ] Analytics dashboard
 
-### Phase 3: Mainnet
+### 🚀 Phase 3: Mainnet
 - [ ] Security audit
 - [ ] Mainnet deployment
+- [ ] Token launch
 - [ ] Marketing campaign
-- [ ] Community building
+
+---
+
+## 🏆 Stats
+
+- **908** Real-world cities
+- **195** Country capitals
+- **7** Continents covered
+- **0** Ocean hexagons (100% land!)
+
+---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md)
+
+```bash
+git clone https://github.com/TektonXYZ/polyworld.git
+cd polyworld
+npm install
+npm run dev
+```
+
+---
 
 ## 🔒 Security
 
-Please report security vulnerabilities to [security@polyworld.game](mailto:security@polyworld.game)
+Report vulnerabilities to [security@polyworld.game](mailto:security@polyworld.game)
 
-See [SECURITY.md](SECURITY.md) for details.
+See [SECURITY.md](SECURITY.md)
+
+---
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file
+MIT License - see [LICENSE](LICENSE)
+
+---
 
 ## 🙏 Acknowledgments
 
 - Solana Foundation
-- Anchor Framework team
+- Anchor Framework
 - OpenStreetMap contributors
-
-## 📞 Contact
-
-- Twitter: [@PolyWorldGame](https://twitter.com/PolyWorldGame)
-- Discord: [Join our community](https://discord.gg/polyworld)
-- Email: hello@polyworld.game
+- CartoDB for map tiles
 
 ---
 
+<div align="center">
+
+### [🎮 Play Now](https://tektonxyz.github.io/polyworld/public/)
+
 **Built with 💜 on Solana**
+
+</div>
