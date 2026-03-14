@@ -934,3 +934,4 @@ const WORLD_CITIES = [
   {name:"Alofi",lat:-19.0554,lng:-169.9179,pop:"low",country:"Niue",continent:"Oceania"},
   {name:"Hanga Roa",lat:-27.1127,lng:-109.3497,pop:"low",country:"Easter Island",continent:"Oceania"},
   {name:"Adamstown",lat:-25.0667,lng:-130.0833,pop:"low",country:"Pitcairn",continent:"Oceania"},
+];
