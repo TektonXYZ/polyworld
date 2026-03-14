@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; background: #0a0a0f; color: white; }
+        #root { width: 100vw; height: 100vh; }
+        #map { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // Just 5 test cities
+        const CITIES = [
+            {name:"New York",lat:40.71,lng:-74.01,pop:"high",country:"USA",continent:"North America"},
+            {name:"London",lat:51.50,lng:-0.12,pop:"high",country:"UK",continent:"Europe"},
+            {name:"Tokyo",lat:35.67,lng:139.65,pop:"high",country:"Japan",continent:"Asia"},
+            {name:"Sydney",lat:-33.87,lng:151.21,pop:"high",country:"Australia",continent:"Oceania"},
+            {name:"Rio",lat:-22.91,lng:-43.17,pop:"high",country:"Brazil",continent:"South America"}
+        ];
+        
+        function App() {
+            useEffect(() => {
+                const map = L.map('map').setView([20, 0], 2);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+                
+                CITIES.forEach(city => {
+                    L.circleMarker([city.lat, city.lng], {
+                        radius: 8,
+                        fillColor: '#ffd700',
+                        color: '#fff',
+                        weight: 2
+                    }).addTo(map).bindPopup(city.name);
+                });
+            }, []);
+            
+            return <div id="map"></div>;
+        }
+        
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
