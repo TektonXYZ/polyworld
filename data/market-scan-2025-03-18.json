@@ -1,0 +1,17 @@
+{
+  "scan_date": "2025-03-18",
+  "markets": {
+    "SPY": {
+      "price": 669.98,
+      "change": 7.69,
+      "change_percent": 1.16
+    },
+    "QQQ": {
+      "price": 601.53,
+      "change": 7.81,
+      "change_percent": 1.32
+    }
+  },
+  "analysis": "Markets bouncing back with solid gains. Tech leading. Risk-on sentiment returning.",
+  "sentiment": "cautiously_bullish"
+}
