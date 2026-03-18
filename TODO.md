@@ -60,3 +60,9 @@
 ---
 
 *Last updated: March 17, 2025*
+
+
+## March 18, 2025 Update
+- Market scan data added for today
+- Performance docs created
+- FAQ expanded with new questions
