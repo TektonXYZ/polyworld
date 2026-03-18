@@ -194,6 +194,14 @@ MIT License - see [LICENSE](LICENSE)
 
 ---
 
+## 👥 Contributors
+
+Thanks to everyone who has contributed to PolyWorld!
+
+<a href="https://github.com/TektonXYZ/polyworld/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=TektonXYZ/polyworld" />
+</a>
+
 ## 🙏 Acknowledgments
 
 - Solana Foundation
