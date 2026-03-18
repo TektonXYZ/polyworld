@@ -1,0 +1,18 @@
+{
+  "scan_date": "2025-03-18",
+  "timestamp": "2025-03-18T18:30:00Z",
+  "markets": {
+    "SPY": {
+      "price": 665.86,
+      "change": -4.93,
+      "change_percent": -0.74
+    },
+    "QQQ": {
+      "price": 599.57,
+      "change": -3.74,
+      "change_percent": -0.62
+    }
+  },
+  "sentiment": "slightly_bearish",
+  "notes": "Markets pulling back after yesterday's gains. Modest declines across the board."
+}
