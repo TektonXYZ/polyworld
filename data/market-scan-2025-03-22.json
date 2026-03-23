@@ -1,0 +1,18 @@
+{
+  "scan_date": "2025-03-22",
+  "timestamp": "2025-03-22T21:45:00Z",
+  "markets": {
+    "SPY": {
+      "price": 657.18,
+      "change": 8.61,
+      "change_percent": 1.33
+    },
+    "QQQ": {
+      "price": 588.91,
+      "change": 6.85,
+      "change_percent": 1.18
+    }
+  },
+  "sentiment": "cautiously_bullish",
+  "notes": "Strong bounce after recent weakness. Tech lagging slightly. Waiting for IV expansion."
+}
